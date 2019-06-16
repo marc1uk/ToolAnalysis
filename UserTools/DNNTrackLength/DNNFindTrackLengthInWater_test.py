@@ -1,29 +1,48 @@
 ##### Script To Validate DNN for Track Length Reconstruction in the water tank
-import Store
-import sys
-import glob
-import numpy as np
-import pandas as pd
-import tensorflow as tf
-import tempfile
-import random
-import csv
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from array import array
-from sklearn import datasets
-from sklearn import metrics
-from sklearn import model_selection
-from sklearn import preprocessing
-from tensorflow import keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
-
-def Initialise():
+def Initialise(pyinit):
+    if (pyinit==1):
+        print("importing all the things")
+        #from myimports import *
+        import myimports
+    else:
+        print("skipping the import")
     return 1
+#import sys
+#def load(name):
+#        if name in sys.modules: # and name not in self.plugins:
+#            # already loaded: return it from sys.modules and add it to our list
+#            module = sys.modules[name]
+#        else:
+#            #module = importlib.import_module(name)
+#            module = __import__(name)
+#        self.plugins.add(name)
+#        return module
+
+import Store
+#import sys
+#import glob
+#import numpy as np
+#import pandas as pd
+#import tensorflow as tf
+#import tempfile
+#import random
+#import csv
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
+#from array import array
+#from sklearn import datasets
+#from sklearn import metrics
+#from sklearn import model_selection
+#from sklearn import preprocessing
+#from tensorflow import keras
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import Dense
+#from tensorflow.keras.callbacks import ModelCheckpoint
+#from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+
+#def Initialise():
+#    return 1
 
 def Finalise():
     return 1
@@ -35,15 +54,15 @@ def Execute(Toolchain=True, testingdatafilename=None, weightsfilename=None, pred
     if Toolchain:
         testingdatafilename = Store.GetStoreVariable('Config','TrackLengthTestingDataFile')
     # open the file
-    testfile = open(testdatafilename)
+    testfile = open(testingdatafilename)
     print("evts for testing in: ",testfile)
     # read into a pandas structure
-    testfiledata = pd.read_csv(testfile)
+    testfiledata = pandas.read_csv(testfile)
     testfile.close()
     # convert to 2D numpy array
-    TestingDataset = np.array(testfiledata)
+    TestingDataset = numpy.array(testfiledata)
     # split the numpy array up into sub-arrays
-    testfeatures, testlambdamax, testlabels, testrest = np.split(TestingDataset,[2203,2204,2205],axis=1)
+    testfeatures, testlambdamax, testlabels, testrest = numpy.split(TestingDataset,[2203,2204,2205],axis=1)
     # scale the features
     testfeatures_transformed = scaler.transform(testfeatures)
 
@@ -104,8 +123,8 @@ def Execute(Toolchain=True, testingdatafilename=None, weightsfilename=None, pred
         return 1
     
     # build a dataframe from the true and predicted track lengths
-    outputdataarray = np.concatenate((test_y, y_predicted),axis=1)
-    outputdataframe=pd.DataFrame(outputdataarray, columns=['TrueTrackLengthInWater','DNNRecoLength'])
+    outputdataarray = numpy.concatenate((test_y, y_predicted),axis=1)
+    outputdataframe=pandas.DataFrame(outputdataarray, columns=['TrueTrackLengthInWater','DNNRecoLength'])
 
     # append as additional columns to the input dataframe
     testfiledata.insert(2217, 'TrueTrackLengthInWater', outputdataframe['TrueTrackLengthInWater'].values, allow_duplicates="True")
