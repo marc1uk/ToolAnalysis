@@ -7,6 +7,6 @@ MCMRDCut 0
 MCPiKCut 0
 MRDRecoCut 0
 RecoPMTVolCut 0
-RecoFVCut 1
+RecoFVCut 0
 NHitCut 1
 PromptTrigOnly 1

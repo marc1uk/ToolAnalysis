@@ -165,7 +165,7 @@ RecoVertex* VtxExtendedVertexFinder::FitGridSeeds(std::vector<RecoVertex>* vSeed
   for( unsigned int n=0; n<nlast; n++ ){
     //Find best time with Minuit
     MinuitOptimizer* myOptimizer = new MinuitOptimizer();
-    myOptimizer->SetPrintLevel(0);
+    myOptimizer->SetPrintLevel(-1);
     myOptimizer->SetMeanTimeCalculatorType(1);
     myOptimizer->LoadVertexGeometry(myvtxgeo); //Load vertex geometry
     fSeedPos = &(vSeedVtxList->at(n));

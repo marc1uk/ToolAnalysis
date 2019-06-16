@@ -29,6 +29,7 @@ class WriteTrainingCsvFiles: public Tool {
   std::ofstream csvfile;
   std::vector<std::string> tracklengthtrainingfiles;
   long long trainingentries;
+  uint32_t entries_written=0;
   
   // verbosity levels: if 'verbosity' < this level, the message type will be logged.
   int verbosity=1;

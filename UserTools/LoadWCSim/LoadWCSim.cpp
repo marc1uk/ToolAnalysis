@@ -314,11 +314,12 @@ bool LoadWCSim::Execute(){
 						nextrack->GetId(),
 						nextrack->GetParenttype(),
 						nextrack->GetFlag());
-					if((nextrack->GetIpnu()==13)&&(nextrack->GetParenttype()==0)&&(nextrack->GetFlag()!=0)
+					if((nextrack->GetIpnu()==13)&&(nextrack->GetParenttype()==0)&&(nextrack->GetFlag()==0)
 					     && (primarymuonindex<0)){
 						// call this the primary muon. If we have more than one, use the first
 						primarymuonindex = MCParticles->size();
 					}
+/*
 					if((abs(nextrack->GetIpnu())==13)||
 					   (abs(nextrack->GetIpnu())==211)||
 					   (nextrack->GetIpnu()==111)){
@@ -334,7 +335,6 @@ bool LoadWCSim::Execute(){
 								<< ")"
 								<<std::endl;
 					}
-/*
 					// Print primary muons or the first track
 					if(((nextrack->GetIpnu()==13) && (nextrack->GetParenttype()==0))||
 					   (MCParticles->size()==0)){

@@ -1,6 +1,6 @@
 # DigitBuilder config file
 
-verbosity 1
+verbosity 0
 #Get Pion/Kaon counts from MC Truth
 GetPionKaonInfo 1
 #Particle ID you want to load from parent particles; 13 for muon

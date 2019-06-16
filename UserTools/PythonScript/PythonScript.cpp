@@ -77,11 +77,12 @@ bool PythonScript::Initialise(std::string configfile, DataModel &data){
     pFuncF = PyObject_GetAttrString(pModule, finalisefunction.c_str());
 
     if (pFuncI && pFuncE && pFuncF && PyCallable_Check(pFuncI) && PyCallable_Check(pFuncE) && PyCallable_Check(pFuncF)) {
-      pArgs = PyTuple_New(0);
+      //pArgs = PyTuple_New(0);
+       pArgs = Py_BuildValue("(i)",pyinit);
       
-      /* we dont rreally want to pass any arguments but have the option here
+      /* we dont really want to pass any arguments but have the option here
 	 for (int i = 0; i < 0; ++i) {
-	 pValue = PyInt_FromLong(i);
+	 pValue = PyLong_FromLong(i);
 	 if (!pValue) {
 	 Py_DECREF(pArgs);
 	 Py_DECREF(pModule);

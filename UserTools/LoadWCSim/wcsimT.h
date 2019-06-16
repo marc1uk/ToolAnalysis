@@ -119,6 +119,12 @@ wcsimT::wcsimT(std::string pattern, int verbosein) : verbose(verbosein)
 
 wcsimT::~wcsimT()
 {
+   // Reinitialize events
+   // ===================
+//   if(wcsimrootevent) wcsimrootevent->ReInitialize();
+//   if(wcsimrootevent_mrd) wcsimrootevent_mrd->ReInitialize();
+//   if(wcsimrootevent_facc) wcsimrootevent_facc->ReInitialize();
+
    if (!fChain) return;
    delete fChain->GetCurrentFile();
 }
@@ -129,10 +135,17 @@ Int_t wcsimT::GetEntry(Long64_t entry)
    Long64_t ientry = LoadTree(entry);
    if(verbose>3) cout<<"corresponding localentry is "<<ientry;
    if (ientry < 0) return -4;
-// Read contents of entry.
    if(verbose>3) cout<<" from fChain "<<fChain;
    if (!fChain) return 0;
    if(verbose>3) cout<<" (which isn't 0)"<<endl;
+   // Reinitialize events before getting new ones
+   // ===========================================
+/*
+   if(wcsimrootevent) wcsimrootevent->ReInitialize();
+   if(wcsimrootevent_mrd) wcsimrootevent_mrd->ReInitialize();
+   if(wcsimrootevent_facc) wcsimrootevent_facc->ReInitialize();
+*/
+   // Get next entry from TTree
    return fChain->GetEntry(entry);    // FIXME ientry or entry???
 }
 
@@ -214,6 +227,11 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
    } else if(wcsimrootopts==0){
      cerr<<"Init called with null optstree with no existing wcsim options!"<<endl; return;
    }
+
+   // Should we do this?
+//   b_wcsimrootevent->SetAutoDelete(kTrue);
+//   b_wcsimrootevent_mrd->SetAutoDelete(kTrue);
+//   b_wcsimrootevent_facc->SetAutoDelete(kTrue);
    
    Notify();
 }

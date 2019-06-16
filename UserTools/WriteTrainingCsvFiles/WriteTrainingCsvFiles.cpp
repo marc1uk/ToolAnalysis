@@ -18,7 +18,6 @@ bool WriteTrainingCsvFiles::Initialise(std::string configfile, DataModel &data){
   
   // Config Variables for this tool
   // ==============================
-std::cout<<"getting DNN variables"<<std::endl;
   std::string TrackLengthTrainingDataFile;
   std::string TrackLengthTestingDataFile;
   // first check if we're splitting the tchain loops into both training and testing
@@ -48,19 +47,16 @@ std::cout<<"getting DNN variables"<<std::endl;
   // Write the file header(s)
   // ========================
   if(trainingentries>1){
-std::cout<<"writing DNN training and testing files"<<std::endl;
     // if we're splitting the run up into training and testing samples, we need to generate multiple output csvs
     tracklengthtrainingfiles.push_back(TrackLengthTrainingDataFile);
     tracklengthtrainingfiles.push_back(TrackLengthTestingDataFile);
   } else {
     // otherwise just one csv
     tracklengthtrainingfiles.push_back(TrackLengthTrainingDataFile);
-std::cout<<"writing DNN training file: "<<TrackLengthTrainingDataFile<<std::endl;
   }
   
   // loop over the csv's we're creating and write header row
   for(std::string apath : tracklengthtrainingfiles){
-std::cout<<"writing header for file "<<apath<<std::endl;
     csvfile.open(apath,std::fstream::out);
     if(!csvfile.is_open()){
      Log("WriteTrainingCsvFiles Tool: Failed to open "+apath+" for writing headers",v_error,verbosity);
@@ -71,48 +67,59 @@ std::cout<<"writing header for file "<<apath<<std::endl;
     for (int i=0; i<maxhits0;++i){
        csvfile<<"T_"<<i<<",";
     }
-    csvfile<<"lambda_max"<<",";  //first estimation of track length(using photons projection on track)
-    csvfile<<"totalPMTs"<<",";   // number of PMT hits, not number of pmts.
-    csvfile<<"totalLAPPDs"<<","; // number of LAPPD hits... 
-    csvfile<<"lambda_max"<<",";  // ... again...?
-    csvfile<<"TrueTrackLengthInWater"<<",";
-    csvfile<<"neutrinoE"<<",";
-    csvfile<<"trueKE"<<",";      // of the primary muon
-    csvfile<<"diffDirAbs"<<",";
-    csvfile<<"TrueTrackLengthInMrd"<<",";
-    csvfile<<"recoDWallR"<<",";
-    csvfile<<"recoDWallZ"<<",";
-    csvfile<<"dirX"<<",";        // of the reconstructed muon
-    csvfile<<"dirY"<<",";
-    csvfile<<"dirZ"<<",";
-    csvfile<<"vtxX"<<",";        // of the reconstructed event
-    csvfile<<"vtxY"<<",";
-    csvfile<<"vtxZ";
-    csvfile<<"recoVtxFOM"<<",";
-    csvfile<<"recoStatus"<<",";
-    csvfile<<"deltaVtxR"<<",";
-    csvfile<<"deltaAngle"<<",";
-    csvfile<<'\n';
+    csvfile<<"lambda_max,"  //first estimation of track length(using photons projection on track)
+           <<"totalPMTs,"   // number of PMT hits, not number of pmts.
+           <<"totalLAPPDs," // number of LAPPD hits... 
+           <<"lambda_max,"  // ... again...?
+           <<"TrueTrackLengthInWater,"
+           <<"neutrinoE,"
+           <<"trueKE,"      // of the primary muon
+           <<"diffDirAbs,"
+           <<"TrueTrackLengthInMrd,"
+           <<"recoDWallR,"
+           <<"recoDWallZ,"
+           <<"dirX,"        // of the reconstructed muon
+           <<"dirY,"
+           <<"dirZ,"
+           <<"vtxX,"        // of the reconstructed event
+           <<"vtxY,"
+           <<"vtxZ,"
+           <<"recoVtxFOM,"
+           <<"recoStatus,"
+           <<"deltaVtxR,"
+           <<"deltaAngle"
+           <<'\n';
     // }
     csvfile.close();
   }
   csvfile.open(tracklengthtrainingfiles.front(),std::fstream::app);  // open (first) file for writing events
   
-std::cout<<"done initializing"<<std::endl;
   return true;
 }
 
 bool WriteTrainingCsvFiles::Execute(){
+  Log("WriteTrainingCsvFiles Tool: Executing",v_message,verbosity);
   
   // Check if the event needs writing to file
   // ========================================
   uint32_t EventNumber;
   get_ok = m_data->Stores.at("ANNIEEvent")->Get("EventNumber", EventNumber);
-  std::cout<<"EventNumber: "<<EventNumber<<endl;
+  if(not get_ok){
+    Log("WriteTrainingCsvFiles Tool: Failed to get EventNumber from ANNIEEvent",v_error,verbosity);
+    return false;
+  }
   // Not every event is written to file: check if this one passed checks:
   uint32_t ThisEvtNum;
-  m_data->Stores.at("EnergyReco")->Get("ThisEvtNum",ThisEvtNum);
-  if(ThisEvtNum!=EventNumber){ return true; } // this event didn't pass checks; don't write this entry
+  get_ok = m_data->Stores.at("EnergyReco")->Get("ThisEvtNum",ThisEvtNum);
+  if(not get_ok){
+    Log("WriteTrainingCsvFiles Tool: Failed to get ThisEvtNum from EneryReco store",v_error,verbosity);
+    return false;
+  }
+  Log("WriteTrainingCsvFiles Tool: ThisEvtNum="+to_string(ThisEvtNum)+", current event is "+to_string(EventNumber),v_debug,verbosity);
+  if(ThisEvtNum!=EventNumber){
+    Log("WriteTrainingCsvFiles Tool: ThisEvtNum!=EventNumber; skipping this write",v_debug,verbosity);
+    return true;
+   } // this event didn't pass checks; don't write this entry
   
   // Retrieve variables from BoostStore
   // ==================================
@@ -137,6 +144,7 @@ bool WriteTrainingCsvFiles::Execute(){
   double deltaAngle;
   
   // Then do the retrieval TODO should check all these retrievals succeed
+  Log("WriteTrainingCsvFiles Tool: Getting variables from EnergyReco Store",v_debug,verbosity);
   m_data->Stores.at("EnergyReco")->Get("lambda_vec",lambda_vector);
   m_data->Stores.at("EnergyReco")->Get("digit_ts_vec",digitT);
   m_data->Stores.at("EnergyReco")->Get("lambda_max",lambda_max);
@@ -160,38 +168,48 @@ bool WriteTrainingCsvFiles::Execute(){
   // Write to .csv file
   // ==================
   // pick which file to write to
-   if((tracklengthtrainingfiles.size()>1) && (EventNumber=trainingentries)){    // once we've processed requested
-     csvfile.close();                                                           // number of training entries
-     csvfile.open(tracklengthtrainingfiles.back(), std::fstream::app);          // switch output to testing file
-   }
-   for(int i=0; i<maxhits0;++i){
-      csvfile<<lambda_vector.at(i)<<",";
-   }
-   for(int i=0; i<maxhits0;++i){
-      csvfile<<digitT.at(i)<<",";
-   }
-   csvfile<<lambda_max<<",";
-   csvfile<<totalPMTs<<",";
-   csvfile<<totalLAPPDs<<",";
-   csvfile<<lambda_max<<",";
-   csvfile<<TrueTrackLengthInWater2<<",";
-   csvfile<<TrueNeutrinoEnergy<<",";
-   csvfile<<trueEnergy<<",";
-   csvfile<<diffDirAbs2<<",";
-   csvfile<<TrueTrackLengthInMrd2<<",";
-   csvfile<<recoDWallR2<<",";
-   csvfile<<recoDWallZ2<<",";
-   csvfile<<dirVec.X()<<",";
-   csvfile<<dirVec.Y()<<",";
-   csvfile<<dirVec.Z()<<",";
-   csvfile<<vtxVec.X()<<",";
-   csvfile<<vtxVec.Y()<<",";
-   csvfile<<vtxVec.Z()<<",";
-   csvfile<<recoVtxFOM<<",";
-   csvfile<<recoStatus<<",";
-   csvfile<<deltaVtxR<<",";
-   csvfile<<deltaAngle;
-   csvfile<<'\n';
+  if((tracklengthtrainingfiles.size()>1) && (entries_written==trainingentries)){    // once we've processed requested
+    Log("WriteTrainingCsvFile Tool: switching to testing file",v_debug,verbosity);
+    csvfile.close();                                                           // number of training entries
+    csvfile.open(tracklengthtrainingfiles.back(), std::fstream::app);          // switch output to testing file
+    if(not csvfile.is_open()){
+      Log("WriteTrainingCsvFile Tool: Failed to open testing file",v_debug,verbosity);
+      return false;
+    }
+  }
+  if(not csvfile.is_open()){
+     Log("WriteTrainingCsvFile Tool: output file is closed, skipping write",v_debug,verbosity);
+     return true;
+  }
+  for(int i=0; i<maxhits0;++i){
+     csvfile<<lambda_vector.at(i)<<",";
+  }
+  for(int i=0; i<maxhits0;++i){
+     csvfile<<digitT.at(i)<<",";
+  }
+  csvfile<<lambda_max<<","
+         <<totalPMTs<<","
+         <<totalLAPPDs<<","
+         <<lambda_max<<","
+         <<TrueTrackLengthInWater2<<","
+         <<TrueNeutrinoEnergy<<","
+         <<trueEnergy<<","
+         <<diffDirAbs2<<","
+         <<TrueTrackLengthInMrd2<<","
+         <<recoDWallR2<<","
+         <<recoDWallZ2<<","
+         <<dirVec.X()<<","
+         <<dirVec.Y()<<","
+         <<dirVec.Z()<<","
+         <<vtxVec.X()<<","
+         <<vtxVec.Y()<<","
+         <<vtxVec.Z()<<","
+         <<recoVtxFOM<<","
+         <<recoStatus<<","
+         <<deltaVtxR<<","
+         <<deltaAngle
+         <<'\n';
+  ++entries_written;
   
   return true;
 }
