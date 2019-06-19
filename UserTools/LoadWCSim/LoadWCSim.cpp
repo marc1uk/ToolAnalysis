@@ -173,7 +173,6 @@ bool LoadWCSim::Initialise(std::string configfile, DataModel &data){
 	} while(WCSimEntry->wcsimrootevent->GetNumberOfEvents()==0);
 	atrigt = WCSimEntry->wcsimrootevent->GetTrigger(0);
 	TimeClass RunStartTime(atrigt->GetHeader()->GetDate());
-	MCEventNum=filestartoffset;
 	MCFile = WCSimEntry->GetCurrentFile()->GetName();
 	m_data->Stores.at("ANNIEEvent")->Set("MCFile",MCFile);
 	
@@ -201,15 +200,18 @@ bool LoadWCSim::Initialise(std::string configfile, DataModel &data){
 	trackid_to_mcparticleindex = new std::map<int,int>;
 	
 	// Pre-load first entry
-	int nbytesread = WCSimEntry->GetEntry(MCEventNum);  // <0 if out of file
-	if(nbytesread<=0){
-		logmessage = "LoadWCSim Tool had no entry "+to_string(MCEventNum);
-		if(nbytesread==-4){
-			logmessage+=": Overran end of TChain! Have you specified more iterations than are available in ToolChainConfig?";
-		} else if(nbytesread==0){
-			logmessage+=": No TChain loaded! Is your filepath correct?";
+	if(MCEventNum!=filestartoffset){  // we probably already preloaded this to get run start time
+		MCEventNum=filestartoffset;
+		int nbytesread = WCSimEntry->GetEntry(MCEventNum);  // <0 if out of file
+		if(nbytesread<=0){
+			logmessage = "LoadWCSim Tool had no entry "+to_string(MCEventNum);
+			if(nbytesread==-4){
+				logmessage+=": Overran end of TChain! Have you specified more iterations than are available in ToolChainConfig?";
+			} else if(nbytesread==0){
+				logmessage+=": No TChain loaded! Is your filepath correct?";
+			}
+			Log(logmessage,v_error,verbosity);
 		}
-		Log(logmessage,v_error,verbosity);
 	}
 	
 	return true;

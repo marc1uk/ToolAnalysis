@@ -119,14 +119,17 @@ wcsimT::wcsimT(std::string pattern, int verbosein) : verbose(verbosein)
 
 wcsimT::~wcsimT()
 {
-   // Reinitialize events
-   // ===================
-//   if(wcsimrootevent) wcsimrootevent->ReInitialize();
-//   if(wcsimrootevent_mrd) wcsimrootevent_mrd->ReInitialize();
-//   if(wcsimrootevent_facc) wcsimrootevent_facc->ReInitialize();
-
    if (!fChain) return;
-   delete fChain->GetCurrentFile();
+
+   fChain->ResetBranchAddresses();
+   if(wcsimrootevent) delete wcsimrootevent;
+   if(wcsimrootevent_mrd) delete wcsimrootevent_mrd;
+   if(wcsimrootevent_facc) delete wcsimrootevent_facc;
+   if(wcsimrootgeom) delete wcsimrootgeom;
+   if(wcsimrootopts) delete wcsimrootopts;
+
+   // don't delete anything else...
+   delete fChain;
 }
 
 Int_t wcsimT::GetEntry(Long64_t entry)
@@ -138,13 +141,7 @@ Int_t wcsimT::GetEntry(Long64_t entry)
    if(verbose>3) cout<<" from fChain "<<fChain;
    if (!fChain) return 0;
    if(verbose>3) cout<<" (which isn't 0)"<<endl;
-   // Reinitialize events before getting new ones
-   // ===========================================
-/*
-   if(wcsimrootevent) wcsimrootevent->ReInitialize();
-   if(wcsimrootevent_mrd) wcsimrootevent_mrd->ReInitialize();
-   if(wcsimrootevent_facc) wcsimrootevent_facc->ReInitialize();
-*/
+
    // Get next entry from TTree
    return fChain->GetEntry(entry);    // FIXME ientry or entry???
 }
@@ -188,6 +185,13 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
    fCurrent = -1;
    //fChain->SetMakeClass(1); //makes it stop working!
    int branchok=0;
+   wcsimrootevent = new WCSimRootEvent();
+   wcsimrootevent->Initialize();
+   wcsimrootevent_mrd = new WCSimRootEvent();
+   wcsimrootevent_mrd->Initialize();
+   wcsimrootevent_facc = new WCSimRootEvent();
+   wcsimrootevent_facc->Initialize();
+
    branchok = fChain->SetBranchAddress("wcsimrootevent",&wcsimrootevent, &b_wcsimrootevent);
    if(branchok<0) cerr<<"Failed to set branch address for wcsimrootevent"<<endl;
    branchok = fChain->SetBranchAddress("wcsimrootevent_mrd",&wcsimrootevent_mrd, &b_wcsimrootevent_mrd);
@@ -229,9 +233,9 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
    }
 
    // Should we do this?
-//   b_wcsimrootevent->SetAutoDelete(kTrue);
-//   b_wcsimrootevent_mrd->SetAutoDelete(kTrue);
-//   b_wcsimrootevent_facc->SetAutoDelete(kTrue);
+   b_wcsimrootevent->SetAutoDelete(true);
+   b_wcsimrootevent_mrd->SetAutoDelete(true);
+   b_wcsimrootevent_facc->SetAutoDelete(true);
    
    Notify();
 }
