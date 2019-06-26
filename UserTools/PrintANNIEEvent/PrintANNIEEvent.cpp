@@ -49,12 +49,16 @@ bool PrintANNIEEvent::Execute(){
 	get_ok = m_data->Stores["ANNIEEvent"]->Get("MCFlag",MCFlag);
 	if(get_ok==0) MCFlag=0;
 	get_ok = m_data->Stores["ANNIEEvent"]->Get("EventTime",EventTime);
+	get_ok = m_data->Stores["ANNIEEvent"]->Get("MCFile",MCFile);
+        if(not get_ok){ std::cerr<<"No MCFile in ANNIEEvent!"<<std::endl; assert(false); }
+	if(get_ok==0) MCFile="";
 	get_ok = m_data->Stores["ANNIEEvent"]->Get("MCEventNum",MCEventNum);
+        if(not get_ok){ std::cerr<<"No MCEventNum in ANNIEEvent!"<<std::endl; assert(false); }
 	if(get_ok==0) MCEventNum=-1;
 	get_ok = m_data->Stores["ANNIEEvent"]->Get("MCTriggernum",MCTriggernum);
+        if(not get_ok){ std::cerr<<"No MCTriggerNum in ANNIEEvent!"<<std::endl; assert(false); }
+        if(MCTriggernum>1000){ std::cerr<<"In file "<<MCFile<<", Execute loop "<<EventNumber<<", MCEvent="<<MCEventNum<<", MCTriggernum of "<<MCTriggernum<<std::endl; assert(false); }
 	if(get_ok==0) MCTriggernum=-1;
-	get_ok = m_data->Stores["ANNIEEvent"]->Get("MCFile",MCFile);
-	if(get_ok==0) MCFile="";
 	get_ok = m_data->Stores["ANNIEEvent"]->Get("BeamStatus",BeamStatus);
 	
 	cout<<"RunNumber : "<<RunNumber<<endl;

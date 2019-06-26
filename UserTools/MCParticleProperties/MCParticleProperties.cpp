@@ -250,6 +250,20 @@ bool MCParticleProperties::Execute(){
 				<<MRDentrypoint.Z()<<") -> ("<<MRDexitpoint.X()<<", "<<MRDexitpoint.Y()<<", "
 				<<MRDexitpoint.Z()<<")"<<endl;
 		}
+		int primarymuonindex=-1;
+		get_ok = m_data->Stores.at("ANNIEEvent")->Get("PrimaryMuonIndex",primarymuonindex);
+		if(not get_ok){
+			Log("MCParticleProperties Tool: No PrimaryMuonIndex in ANNIEEvent!",v_error,verbosity);
+			return false;
+		}
+		if(tracki==primarymuonindex){
+			if(atrackentersmrd){
+				++n_events_with_primarymuon_entersmrd;
+				if(atrackpenetratesmrd){ ++n_events_with_primarymuon_penetratesmrd; }
+				else if(atrackstopsinmrd){ ++n_events_with_primarymuon_stopsinmrd; }
+				else {++n_events_with_primarymuon_mrdsideexit; }
+			}
+		}
 		
 		//====================================================================================================
 		// calculate the track length in water
@@ -411,7 +425,11 @@ bool MCParticleProperties::Execute(){
 
 
 bool MCParticleProperties::Finalise(){
-	
+	std::cout<<"MCParticleProperties Summary: "<<std::endl;
+	std::cout<<"n_events_with_primarymuon_entersmrd="<<n_events_with_primarymuon_entersmrd<<std::endl;
+	std::cout<<"n_events_with_primarymuon_stopsinmrd="<<n_events_with_primarymuon_stopsinmrd<<std::endl;
+	std::cout<<"n_events_with_primarymuon_penetratesmrd="<<n_events_with_primarymuon_penetratesmrd<<std::endl;
+	std::cout<<"n_events_with_primarymuon_mrdsideexit="<<n_events_with_primarymuon_mrdsideexit<<std::endl;
 	return true;
 }
 

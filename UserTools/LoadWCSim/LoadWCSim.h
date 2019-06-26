@@ -138,7 +138,33 @@ class LoadWCSim: public Tool {
 	int v_debug=3;
 	std::string logmessage;
 	int get_ok;
+
+	// efficiency counters, for debug
+	long long n_execute_loops=0;
+	long long n_ttree_events_processed=0;
+	std::vector<long long> n_delayed_trigs_processed;
+	// fill only for MCTriggernum==0
+	long long n_events_in_tank=0;
+	long long n_events_in_fidvol=0;
+	long long n_events_with_amuon=0;
+	long long n_events_with_primarymuon=0;
+	long long n_events_with_primarymuon_hasmrdhits=0;
+	long long n_events_with_primarymuon_stopsinmrd=0;
+
+	// hard coded constants! units are meters
+	float tank_halfheight=1.98;
+	float tank_radius=1.524;
+	float tankcentrex=0;
+	float tankcentrey=-0.1446;
+	float tankcentrez=1.681;
+	float fidvol_halfheight=0.5;
+	float fidvol_radius=1.2;
+	float mrd_halfwidth=(3.05/2.);
+	float mrd_halfheight=(2.74/2.);
+	float mrd_start=3.255;
+	float mrd_end=4.6599;
 	
+	int maxmctriggernum=0;
 };
 
 

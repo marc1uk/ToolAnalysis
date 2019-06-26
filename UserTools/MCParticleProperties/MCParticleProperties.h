@@ -55,6 +55,12 @@ class MCParticleProperties: public Tool {
 	std::string logmessage;
 	int get_ok;
 	
+	// debug efficiency counters
+        long long n_events_with_primarymuon_entersmrd=0;
+        long long n_events_with_primarymuon_mrdsideexit=0;
+	long long n_events_with_primarymuon_penetratesmrd=0;
+	long long n_events_with_primarymuon_stopsinmrd=0;
+	
 };
 
 #endif

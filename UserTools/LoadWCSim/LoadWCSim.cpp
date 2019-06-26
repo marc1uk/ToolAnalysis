@@ -1,6 +1,8 @@
 /* vim:set noexpandtab tabstop=4 wrap */
 
 #include "LoadWCSim.h"
+//#include "TROOT.h"
+//#include "TObjectTable.h"
 
 LoadWCSim::LoadWCSim():Tool(){}
 
@@ -265,6 +267,7 @@ bool LoadWCSim::Execute(){
 			ParticleId_to_MrdCharge->clear();
 			ParticleId_to_VetoCharge->clear();
 			primarymuonindex=-1;
+			bool hasmuon=false;
 			
 			for(int trigi=0; trigi<WCSimEntry->wcsimrootevent->GetNumberOfEvents(); trigi++){
 				
@@ -370,6 +373,7 @@ bool LoadWCSim::Execute(){
 					}
 */
 					if(nextrack->GetIpnu()==13){
+						hasmuon=true;
 						logmessage = "Muon found with flag: "+to_string(nextrack->GetFlag())
 							+ ", parent type " + to_string(nextrack->GetParenttype())
 							+ ", Id " + to_string(nextrack->GetId())
@@ -387,7 +391,7 @@ bool LoadWCSim::Execute(){
 					MCParticles->push_back(thisparticle);
 				}
 				if(verbosity>2) cout<<"MCParticles has "<<MCParticles->size()<<" entries"<<endl;
-				
+				if(hasmuon) ++n_events_with_amuon;
 			}  // loop over loading particles from all MC triggers on first MC trigger
 		} else { 
 			// if MCTrigger>0, since particle times are relative to the trigger time,
@@ -597,6 +601,41 @@ bool LoadWCSim::Execute(){
 	m_data->Stores.at("ANNIEEvent")->Set("ParticleId_to_VetoCharge", ParticleId_to_VetoCharge, false);
 	m_data->Stores.at("ANNIEEvent")->Set("TrackId_to_MCParticleIndex",trackid_to_mcparticleindex,false);
 	m_data->Stores.at("ANNIEEvent")->Set("PrimaryMuonIndex",primarymuonindex);
+	if(verbosity>2) cout<<"updating efficiency counters"<<endl;
+        ++n_execute_loops;
+	std::cout<<"n_delayed_trigs_processed.size()="<<n_delayed_trigs_processed.size()<<", MCTriggernum="<<MCTriggernum<<std::endl;
+        if((MCTriggernum+1)>(n_delayed_trigs_processed.size())) n_delayed_trigs_processed.push_back(1);
+        else n_delayed_trigs_processed.at(MCTriggernum)++;
+	if(MCTriggernum==0){
+		cout<<"filling MCTrigger 0 counters"<<std::endl;
+		float vtxx = 0.01*(firsttrigt->GetVtx(0)) - tankcentrex;
+		float vtxy = 0.01*(firsttrigt->GetVtx(1)) - tankcentrey;
+		float vtxz = 0.01*(firsttrigt->GetVtx(2)) - tankcentrez;
+		if( (abs(vtxy)<tank_halfheight) &&
+			((sqrt(pow(vtxx,2.)+pow(vtxz,2.)))<tank_radius) ){
+			++n_events_in_tank;
+		}
+                if( (abs(vtxy)<fidvol_halfheight) &&
+                        ((sqrt(pow(vtxx,2.)+pow(vtxz,2.)))<fidvol_radius) ){
+                        ++n_events_in_fidvol;
+                }
+		std::cout<<"primarymuonindex="<<primarymuonindex<<std::endl;
+		if(primarymuonindex>=0){
+			++n_events_with_primarymuon;
+			if(ParticleId_to_MrdTubeIds->count(primarymuonindex)>0){
+	        		++n_events_with_primarymuon_hasmrdhits;
+			}
+			std::cout<<"MCParticles->size()="<<MCParticles->size()<<std::endl;
+	        	MCParticle primarymuon = MCParticles->at(primarymuonindex);
+			if( (abs(primarymuon.GetStopVertex().X())<mrd_halfwidth) &&
+			    (abs(primarymuon.GetStopVertex().Y())<mrd_halfheight) &&
+			    (primarymuon.GetStopVertex().Z()>mrd_start) &&
+			    (primarymuon.GetStopVertex().Z()<mrd_end) ){
+	        		++n_events_with_primarymuon_stopsinmrd;
+			}
+
+		}
+	}
 	//Things that need to be set by later tools:
 	//RawADCData
 	//CalibratedADCData
@@ -609,17 +648,20 @@ bool LoadWCSim::Execute(){
 	MCTriggernum++;
 	if(verbosity>2) cout<<"checking if we're done on trigs in this event"<<endl;
 	bool newentry=false;
-	if(MCTriggernum==WCSimEntry->wcsimrootevent->GetNumberOfEvents()){
+	std::cout<<"max mctriggernum="<<maxmctriggernum<<std::endl;
+	if(MCTriggernum>=WCSimEntry->wcsimrootevent->GetNumberOfEvents()){
 		MCTriggernum=0;
 		MCEventNum++;
 		newentry=true;
 		if(verbosity>2) cout<<"this is the last trigger in the event: next loop will process a new event"<<endl;
 	} else {
+		if(MCTriggernum>maxmctriggernum) maxmctriggernum=MCTriggernum;
 		if(verbosity>2) cout<<"there are further triggers in this event: next loop will process the trigger "<<MCTriggernum<<"/"<<WCSimEntry->wcsimrootevent->GetNumberOfEvents()<<endl;
 	}
 	
 	// Pre-load next entry so we can stop the loop if it this was the last one in the chain
 	if(newentry){  // if next loop is processing the next trigger in the same entry, no need to re-load it
+		++n_ttree_events_processed;
 		if(MCEventNum>=MaxEntries && MaxEntries>0){
 			cout<<"LoadWCSim Tool: Reached max entries specified in config file, terminating ToolChain"<<endl;
 			m_data->vars.Set("StopLoop",1);
@@ -635,7 +677,7 @@ bool LoadWCSim::Execute(){
 }
 
 bool LoadWCSim::Finalise(){
-	WCSimEntry->GetCurrentFile()->Close();
+	std::cout<<"Final file is: "<<WCSimEntry->GetCurrentFile()->GetName()<<std::endl;
 	delete WCSimEntry;
 	
 	// any pointers put in Stores to objects we do not want the Store to clean up
@@ -654,6 +696,20 @@ bool LoadWCSim::Finalise(){
 //	m_data->CStore.Set("ParticleId_to_MrdCharge", ParticleId_to_MrdCharge_nullptr, false);
 //	m_data->CStore.Set("ParticleId_to_VetoTubeIds", ParticleId_to_VetoTubeIds_nullptr, false);
 //	m_data->CStore.Set("ParticleId_to_VetoCharge", ParticleId_to_VetoCharge_nullptr, false);
+	
+	// print efficiency stats:
+	std::cout<<"LoadWCSim summary:"<<std::endl;
+	std::cout<<"n_execute_loops="<<n_execute_loops<<std::endl
+		<<"n_ttree_events_processed="<<n_ttree_events_processed<<std::endl
+		<<"n_events_in_tank="<<n_events_in_tank<<std::endl
+		<<"n_events_in_fidvol="<<n_events_in_fidvol<<std::endl
+		<<"n_events_with_amuon="<<n_events_with_amuon<<std::endl
+		<<"n_events_with_primarymuon="<<n_events_with_primarymuon<<std::endl
+		<<"n_events_with_primarymuon_hasmrdhits="<<n_events_with_primarymuon_hasmrdhits<<std::endl
+		<<"n_events_with_primarymuon_stopsinmrd="<<n_events_with_primarymuon_stopsinmrd<<std::endl;
+	for(int trigi=0; trigi<n_delayed_trigs_processed.size(); trigi++){
+		std::cout<<"n_delayedtrig_"<<trigi<<"="<<n_delayed_trigs_processed.at(trigi)<<std::endl;
+	}
 	
 	return true;
 }
