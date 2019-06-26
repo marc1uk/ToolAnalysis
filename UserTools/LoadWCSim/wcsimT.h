@@ -13,6 +13,7 @@
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
+//#include <TObjectTable.h>
 
 // Header file for the classes stored in the TTree if any.
 #include "TObject.h"
@@ -26,6 +27,7 @@ class wcsimT {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
    Int_t           fCurrent; //!current Tree number in a TChain
+   Long64_t       last_entry_of_current_tree=-1;
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
@@ -135,15 +137,44 @@ wcsimT::~wcsimT()
 Int_t wcsimT::GetEntry(Long64_t entry)
 {
    if(verbose>2) cout<<"getting wcsimT entry "<<entry<<endl;
-   Long64_t ientry = LoadTree(entry);
-   if(verbose>3) cout<<"corresponding localentry is "<<ientry;
-   if (ientry < 0) return -4;
-   if(verbose>3) cout<<" from fChain "<<fChain;
-   if (!fChain) return 0;
-   if(verbose>3) cout<<" (which isn't 0)"<<endl;
 
+   if(entry>last_entry_of_current_tree){
+        //std::cout<<"Abdout to retrieve the first entry of a new file: cleanup"<<std::endl;
+        if(wcsimrootevent) delete wcsimrootevent;
+        if(wcsimrootevent_mrd) delete wcsimrootevent_mrd;
+        if(wcsimrootevent_facc) delete wcsimrootevent_facc;
+        wcsimrootevent = nullptr;
+        wcsimrootevent_mrd = nullptr;
+        wcsimrootevent_facc = nullptr;
+
+        //std::cout<<"After cleanup, object table is: "<<std::endl;
+        //gObjectTable->Print();
+        
+        Long64_t localentry = fChain->LoadTree(entry);
+        if(localentry<0){
+             return -1;
+        }
+        fCurrent=fChain->GetTreeNumber();
+        //std::cout<<"Loaded file "<<fCurrent<<std::endl;
+        
+        Int_t branchok=0;
+        branchok = fChain->GetTree()->SetBranchAddress("wcsimrootevent",&wcsimrootevent, &b_wcsimrootevent);
+        if(branchok<0){ std::cerr<<"Failed to set branch address for wcsimrootevent"<<std::endl; return -1; }
+        branchok = fChain->GetTree()->SetBranchAddress("wcsimrootevent_mrd",&wcsimrootevent_mrd, &b_wcsimrootevent_mrd);
+        if(branchok<0){ std::cerr<<"Failed to set branch address for wcsimrootevent_mrd"<<std::endl; return -1; }
+        branchok = fChain->GetTree()->SetBranchAddress("wcsimrootevent_facc",&wcsimrootevent_facc, &b_wcsimrootevent_facc);
+        if(branchok<0){ std::cerr<<"Failed to set branch address for wcsimrootevent_facc"<<std::endl; return -1; }
+        
+        b_wcsimrootevent->SetAutoDelete(true);
+        b_wcsimrootevent_mrd->SetAutoDelete(true);
+        b_wcsimrootevent_facc->SetAutoDelete(true);
+        
+        //std::cout<<"getting last entry of this tree: ";
+        last_entry_of_current_tree = entry + fChain->GetTree()->GetEntriesFast() - 1;
+        //std::cout<<last_entry_of_current_tree<<std::endl;
+}
    // Get next entry from TTree
-   return fChain->GetEntry(entry);    // FIXME ientry or entry???
+   return fChain->GetEntry(entry);
 }
 
 Long64_t wcsimT::LoadTree(Long64_t entry)
@@ -184,20 +215,8 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
    fChain = tree;
    fCurrent = -1;
    //fChain->SetMakeClass(1); //makes it stop working!
-   int branchok=0;
-   wcsimrootevent = new WCSimRootEvent();
-   wcsimrootevent->Initialize();
-   wcsimrootevent_mrd = new WCSimRootEvent();
-   wcsimrootevent_mrd->Initialize();
-   wcsimrootevent_facc = new WCSimRootEvent();
-   wcsimrootevent_facc->Initialize();
+   // all branch address setting is done in GetEntry at the Tree level, due to memory leak issues :(
 
-   branchok = fChain->SetBranchAddress("wcsimrootevent",&wcsimrootevent, &b_wcsimrootevent);
-   if(branchok<0) cerr<<"Failed to set branch address for wcsimrootevent"<<endl;
-   branchok = fChain->SetBranchAddress("wcsimrootevent_mrd",&wcsimrootevent_mrd, &b_wcsimrootevent_mrd);
-   if(branchok<0) cerr<<"Failed to set branch address for wcsimrootevent_mrd"<<endl;
-   branchok = fChain->SetBranchAddress("wcsimrootevent_facc",&wcsimrootevent_facc, &b_wcsimrootevent_facc);
-   if(branchok<0) cerr<<"Failed to set branch address for wcsimrootevent_facc"<<endl;
    // XXX need to figure out how to uniquely identify fUniqueID and fBits branches to do this  XXX
 //   branchok = fChain->SetBranchAddress("fUniqueID", &fUniqueID, &b_wcsimrootevent_fUniqueID);
 //   if(branchok<0) cerr<<"Failed to set branch address for fUniqueID"<<endl;
@@ -212,6 +231,7 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
 //   branchok = fChain->SetBranchAddress("fBits", &facc_fBits, &b_wcsimrootevent_facc_fBits);
 //   if(branchok<0) cerr<<"Failed to set branch address for wcsimrootevent_facc"<<endl;
    
+   Int_t branchok=0;
    if (wcsimrootgeom==0&&geotree!=0){
       branchok = geotree->SetBranchAddress("wcsimrootgeom", &wcsimrootgeom, &b_wcsimrootgeom);
       if(branchok<0){ cerr<<"Failed to set branch address for wcsimrootgeom"<<endl; return; }
@@ -232,11 +252,6 @@ void wcsimT::Init(TTree *tree, TTree* geotree=0, TTree* optstree=0)
      cerr<<"Init called with null optstree with no existing wcsim options!"<<endl; return;
    }
 
-   // Should we do this?
-   b_wcsimrootevent->SetAutoDelete(true);
-   b_wcsimrootevent_mrd->SetAutoDelete(true);
-   b_wcsimrootevent_facc->SetAutoDelete(true);
-   
    Notify();
 }
 

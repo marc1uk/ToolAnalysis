@@ -21,3 +21,10 @@ for folder in `ls -d ${ToolDAQapp}/UserTools/*/ `
 do
     export PYTHONPATH=$folder:${PYTHONPATH}
 done
+
+# temporarily set up python3 from larsoft
+# this doesn't work (ImportError: no module 'os')
+# but  it at least compiles and runs non-python tools okay
+source /grid/fermiapp/products/common/etc/setup
+export PRODUCTS=${PRODUCTS}:/grid/fermiapp/products/larsoft
+setup -f Linux64bit+2.6-2.12 python v3_5_3

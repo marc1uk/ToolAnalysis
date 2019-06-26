@@ -85,7 +85,7 @@ bool HitResiduals::Execute(){
 		cerr<<"No MCParticles"<<endl;
 		return false;
 	}
-	if(muontime!=0) cout<<"Non-zero muon time: "<<muontime<<endl;
+	//if(muontime!=0) cout<<"Non-zero muon time: "<<muontime<<endl;
 	
 	// NOW LOOP OVER HITS AND CALCULATE RESIDUALS
 	if(MCHits){
@@ -106,8 +106,8 @@ bool HitResiduals::Execute(){
 					double expectedarrivaltime = muontime + distance*REF_INDEX_WATER/SPEED_OF_LIGHT;
 					double timeresidual = hittime-expectedarrivaltime;
 					htimeresidpmt->Fill(timeresidual);
-					cout<<"Hittime "<<hittime<<", expected arrival time "<<expectedarrivaltime
-						<<", residual "<<timeresidual<<endl;
+					//cout<<"Hittime "<<hittime<<", expected arrival time "<<expectedarrivaltime
+					//	<<", residual "<<timeresidual<<endl;
 				}
 			}
 		} // end loop over MCHits
@@ -132,8 +132,8 @@ bool HitResiduals::Execute(){
 					double expectedarrivaltime = muontime + distance*REF_INDEX_WATER/SPEED_OF_LIGHT;
 					double timeresidual = hittime-expectedarrivaltime;
 					htimeresidlappd->Fill(timeresidual);
-					cout<<"LAPPDHittime "<<hittime<<", expected arrival time "<<expectedarrivaltime
-						<<", residual "<<timeresidual<<endl;
+					//cout<<"LAPPDHittime "<<hittime<<", expected arrival time "<<expectedarrivaltime
+					//	<<", residual "<<timeresidual<<endl;
 				}
 			}
 		} // end loop over MCLAPPDHits

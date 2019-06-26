@@ -2,3 +2,10 @@
 *~
 Analyse
 ToolDAQ
+*.o
+*.png
+*.csv
+*.root
+*.d
+*.so
+*.pcm
