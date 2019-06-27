@@ -144,7 +144,6 @@ bool RawLoader::Initialise(const std::string config_file, DataModel& data)
   m_variables.Get("InputFile", input_file_name);
   m_data->CStore.Set("InputFile",input_file_name); // for other tools
 
-  int verbosity;
   m_variables.Get("verbose", verbosity);
 
   Log("Opening input file " + input_file_name, 1, verbosity);
@@ -189,9 +188,6 @@ bool RawLoader::Initialise(const std::string config_file, DataModel& data)
 }
 
 bool RawLoader::Execute() {
-
-  int verbosity;
-  m_variables.Get("verbose", verbosity);
 
   // Load the next raw data readout from the input file
   auto raw_readout = m_reader->next();

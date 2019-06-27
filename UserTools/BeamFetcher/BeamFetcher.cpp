@@ -43,11 +43,14 @@ bool BeamFetcher::Initialise(std::string config_filename, DataModel& data)
   }
   dummy_in_file.close();
 
+  beamfetched=false;
 
   return true;
 }
 
 bool BeamFetcher::Execute() {
+
+  if(beamfetched) return true;
 
   uint64_t start_ms_since_epoch;
   bool got_start_ms = m_variables.Get("StartMillisecondsSinceEpoch",
@@ -84,6 +87,9 @@ bool BeamFetcher::Execute() {
       " configuration file option", 0, verbosity_);
     return false;
   }
+
+  beamfetched=true;
+  Log("BeamFetcher tool: Attempting beamfetch", 2, verbosity_);
 
   return fetch_beam_data(start_ms_since_epoch, end_ms_since_epoch,
     chunk_step_ms);

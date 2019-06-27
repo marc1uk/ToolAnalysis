@@ -54,6 +54,8 @@ class RawLoader : public Tool {
   // Flag indicating whether we're processing Hefty mode data (true) or not
   // (false)
   bool m_using_hefty_mode;
+  
+  int verbosity;
 };
 
 #endif
