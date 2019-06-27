@@ -21,6 +21,8 @@ class ADCHitFinder : public Tool {
 
   protected:
 
+  int verbosity;
+
     std::vector<ADCPulse> find_pulses(
       const Waveform<unsigned short>& raw_minibuffer_data,
       const CalibratedADCWaveform<double>& calibrated_minibuffer_data,

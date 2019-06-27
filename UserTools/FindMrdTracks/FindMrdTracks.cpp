@@ -171,7 +171,7 @@ if your class contains pointers, use TrackArray.Clear("C"). You MUST then provid
 			mrdtree->Write("",TObject::kOverwrite);
 			gROOT->cd();
 		}
-		if(verbosity) cout<<"No MRD digits in this event; FindMrdTracks tool returning"<<endl;
+		if(verbosity>2) cout<<"No MRD digits in this event; FindMrdTracks tool returning"<<endl;
 		return true;
 		// skip remainder
 		// ======================================================================================

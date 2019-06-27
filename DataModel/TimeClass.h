@@ -53,6 +53,13 @@ class TimeClass : public SerialisableObject{
 		stringin=AsString();
 		return;
 	}
+	bool operator== (const TimeClass& comp){
+		return ((unixns == comp.unixns));
+	}
+	
+	bool operator!= (const TimeClass& comp){
+		return (not ((*this)==comp));
+	}
 	
 	private:
 	uint64_t unixns;

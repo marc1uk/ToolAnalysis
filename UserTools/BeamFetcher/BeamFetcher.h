@@ -39,4 +39,8 @@ class BeamFetcher: public Tool {
     /// @brief Name of the output file in which the beam database information
     /// will be saved
     std::string db_filename_;
+
+    // only run the tool on the first iteration
+    bool beamfetched;
+
 };

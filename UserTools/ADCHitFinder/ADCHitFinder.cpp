@@ -21,13 +21,13 @@ bool ADCHitFinder::Initialise(std::string config_filename, DataModel& data) {
   // Assign a transient data pointer
   m_data = &data;
 
+  m_variables.Get("verbose", verbosity);
+  
   return true;
 }
 
 bool ADCHitFinder::Execute() {
 
-  int verbosity;
-  m_variables.Get("verbose", verbosity);
 
   try {
     // Get a pointer to the ANNIEEvent Store
