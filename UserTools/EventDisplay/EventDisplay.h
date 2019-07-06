@@ -116,8 +116,8 @@ class EventDisplay: public Tool {
     int n_mrd_pmts;
     int n_veto_pmts;
     int n_lappds;
-    std::vector<int> active_lappds;
-    int act_lappds[max_num_lappds]={0};
+    std::map<int,int> active_lappds_user;  // WCSim LAPPD IDs read from config file
+    std::map<int,int> active_lappds;       // converted to detectorkey
     double max_y;
     double min_y;
 
@@ -150,11 +150,11 @@ class EventDisplay: public Tool {
     std::map<unsigned long,int> channelkey_to_faccpmtid;
     static const unsigned long n_channels_per_lappd = 60;
 
-    double charge[200];
-    double time[200];
-    double charge_lappd[max_num_lappds];
-    std::vector<std::vector<Position>> hits_LAPPDs;
-    std::vector<std::vector<double>> time_lappd;
+    std::map<unsigned long,double> charge;
+    std::map<unsigned long,double> time;
+    std::map<unsigned long,double> charge_lappd;
+    std::map<unsigned long,std::vector<Position>> hits_LAPPDs;
+    std::map<unsigned long,std::vector<double>> time_lappd;
     std::vector<double> mrddigittimesthisevent;
     std::vector<int> mrddigitpmtsthisevent;
     std::vector<double> mrddigitchargesthisevent;
@@ -201,10 +201,10 @@ class EventDisplay: public Tool {
 
     //histograms
     TH1F *time_PMTs = nullptr;
-    TH1F *time_LAPPDs[max_num_lappds];
+    std::map<unsigned long,TH1F*> time_LAPPDs;
     TH1F *charge_PMTs = nullptr;
     TH2F *charge_time_PMTs = nullptr;
-    TH1F *charge_LAPPDs[max_num_lappds];
+    std::map<unsigned long,TH1F*> charge_LAPPDs;
 
     //legends
     TLegend *leg_charge = nullptr;

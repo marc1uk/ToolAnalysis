@@ -120,12 +120,9 @@ bool EventDisplay::Initialise(std::string configfile, DataModel &data){
     ifstream file_lappd(filename_lappd);
     while (!file_lappd.eof()){
       file_lappd>>temp_lappd;
-      active_lappds.push_back(temp_lappd);
+      active_lappds_user.emplace(temp_lappd,1);
     }
     file_lappd.close();
-    for (int i_lappd=0;i_lappd<max_num_lappds;i_lappd++){
-      if (std::find(active_lappds.begin(), active_lappds.end(), i_lappd) != active_lappds.end()) act_lappds[i_lappd]=1;
-    }
   }
 
   //----------------------------------------------------
@@ -160,12 +157,26 @@ bool EventDisplay::Initialise(std::string configfile, DataModel &data){
   n_lappds = geom->GetNumDetectorsInSet("LAPPD");
   n_mrd_pmts = geom->GetNumDetectorsInSet("MRD");
   n_veto_pmts = geom->GetNumDetectorsInSet("Veto");
-  m_data->CStore.Get("detectorkey_to_lappdid",detectorkey_to_lappdid);
+  m_data->CStore.Get("lappdid_to_detectorkey",lappdid_to_detectorkey);
   m_data->CStore.Get("channelkey_to_mrdpmtid",channelkey_to_mrdpmtid);
   m_data->CStore.Get("channelkey_to_faccpmtid",channelkey_to_faccpmtid);
   std::cout <<"PID: Num Tank PMTs: "<<n_tank_pmts<<", num MRD PMTs: "<<n_mrd_pmts<<", num Veto PMTs: "<<n_veto_pmts<<", num LAPPDs: "<<n_lappds<<std::endl;
   std::map<std::string,std::map<unsigned long,Detector*> >* Detectors = geom->GetDetectors();
   std::cout <<"Detectors size: "<<Detectors->size()<<std::endl;
+  
+  //----------------------------------------------------------------------
+  //-----------convert user's provided LAPPD indexes to detectorkey-------
+  //----------------------------------------------------------------------
+  if(lappds_selected){
+    
+    for(auto&& auserid : active_lappds_user){
+      if(lappdid_to_detectorkey.count(auserid.first)==0){
+        std::cerr<<"No detectorkey found for user-provided LAPPDID "<<auserid.first<<"!"<<std::endl;
+      } else {
+        active_lappds.emplace(lappdid_to_detectorkey.at(auserid.first),1);
+      }
+    }
+  }
 
   //----------------------------------------------------------------------
   //-----------read in PMT x/y/z positions into vectors-------------------
@@ -195,10 +206,6 @@ bool EventDisplay::Initialise(std::string configfile, DataModel &data){
 
   if (verbose > 0) std::cout <<"Properties of the detector configuration: "<<n_veto_pmts<<" veto PMTs, "<<n_mrd_pmts<<" MRD PMTs, "<<n_tank_pmts<<" Tank PMTs, and "<<n_lappds<<" LAPPDs."<<std::endl;
   if (verbose > 0) std::cout <<"Max y of Tank PMTs: "<<max_y<<", min y of tank PMTs: "<<min_y<<std::endl;
-  std::vector<Position> vec_zero;
-  Position zero_position(0.,0.,0.);
-  vec_zero.push_back(zero_position);
-  hits_LAPPDs.assign(n_lappds,vec_zero);
 
   //---------------------------------------------------------------
   //----initialize TApplication in case of displayed graphics------
@@ -325,24 +332,13 @@ bool EventDisplay::Execute(){
   mrddigitpmtsthisevent.clear();
   mrddigitchargesthisevent.clear();
 
-  for (int i_pmt=0;i_pmt<n_tank_pmts;i_pmt++){
-    charge[i_pmt]=0;
-    time[i_pmt]=0;
-  }
+  charge.clear();
+  time.clear();
 
   time_lappd.clear();
-  std::vector<double> temp_vec;
-  time_lappd.assign(n_lappds,temp_vec);
   hits_LAPPDs.clear();
-  std::vector<Position> vec_zero;
-  Position zero_position(0.,0.,0.);
-  vec_zero.push_back(zero_position);
-  hits_LAPPDs.assign(n_lappds,vec_zero);
-
-  for (int i_lappd=0;i_lappd<n_lappds;i_lappd++){
-    charge_lappd[i_lappd]=0;
-  }
-
+  charge_lappd.clear();
+  
   //---------------------------------------------------------------
   //-------------clear charge & time histograms -------------------
   //---------------------------------------------------------------
@@ -496,9 +492,8 @@ bool EventDisplay::Execute(){
         continue;
       }
       int detkey = det->GetDetectorID();
-      int LAPPDId = detectorkey_to_lappdid.at(detkey);
       std::vector<MCLAPPDHit>& hits = apair.second;
-      if (verbose > 2) std::cout <<"detector key: "<<detkey<<", LAPPD ID: "<<LAPPDId<<std::endl;
+      if (verbose > 2) std::cout <<"detector key: "<<detkey<<std::endl;
       for (MCLAPPDHit& ahit : hits){
         std::vector<double> temp_pos = ahit.GetPosition();
         double x_lappd = temp_pos.at(0)-tank_center_x;
@@ -506,16 +501,18 @@ bool EventDisplay::Execute(){
         double z_lappd = temp_pos.at(2)-tank_center_z;
         double lappd_charge = 1.0;
         double t_lappd = ahit.GetTime();
-        if ((lappds_selected && act_lappds[LAPPDId-1]==1) || !lappds_selected){
-          if (verbose > 2) std::cout <<"Tube ID LAPPD: "<<LAPPDId-1<<std::endl;
+        if ((lappds_selected && active_lappds.count(detkey)) || !lappds_selected){
+          if (verbose > 2) std::cout <<"Detector Key LAPPD: "<<detkey<<std::endl;
           if (verbose > 2) std::cout <<"LAPPD hit at x="<<x_lappd<<", y="<<y_lappd<<", z="<<z_lappd<<std::endl;
           Position lappd_hit(x_lappd,y_lappd,z_lappd);
-          hits_LAPPDs.at(LAPPDId-1).push_back(lappd_hit);
+          if(hits_LAPPDs.count(detkey)==0) hits_LAPPDs.emplace(deykey,std::vector<Position>{});
+          hits_LAPPDs.at(detkey).push_back(lappd_hit);
           //std::cout <<"Charge of LAPPD hit: "<<ahit.GetCharge()<<std::endl;         //not implemented yet
-          charge_lappd[LAPPDId-1]+=1;
+          charge_lappd[detkey]+=1;
           maximum_lappds++;
           total_hits_lappds++;
-          time_lappd[LAPPDId-1].push_back(t_lappd);
+          if(time_lappd.count(detkey)==0){ time_lappd.emplace(detkey,std::vector<double>); }
+          time_lappd[detkey].push_back(t_lappd);
           if (t_lappd > maximum_time_lappds) maximum_time_lappds = t_lappd;
           if (t_lappd < min_time_lappds) min_time_lappds = t_lappd;
         }
@@ -532,8 +529,9 @@ bool EventDisplay::Execute(){
   //-------------------Fill LAPPD hists ---------------------------
   //---------------------------------------------------------------
 
-  for (int i_lappd=0;i_lappd<n_lappds;i_lappd++){
-    if ((lappds_selected && act_lappds[i_lappd]==1) || !lappds_selected){
+  for (auto&& ahisto : charge_LAPPDs){
+    unsigned long detkey = ahisto.first;
+    if ((lappds_selected && active_lappds_user.count(i_lappd)==1) || !lappds_selected){
       charge_LAPPDs[i_lappd]->Fill(charge_lappd[i_lappd]);
       for (int i_time=0;i_time<time_lappd[i_lappd].size();i_time++){
         if (time_lappd[i_lappd].at(i_time)) time_LAPPDs[i_lappd]->Fill(time_lappd[i_lappd].at(i_time));
@@ -577,7 +575,7 @@ bool EventDisplay::Execute(){
     leg_charge->AddEntry(charge_LAPPDs[max_lappd_charge],lappd_label.c_str());
     for (int i_lappd=0;i_lappd<n_lappds;i_lappd++){
       if (i_lappd==max_lappd_charge) continue;
-      if ((lappds_selected && act_lappds[i_lappd]==1) || !lappds_selected){
+      if ((lappds_selected && active_lappds_user.count(i_lappd)==1) || !lappds_selected){
         charge_LAPPDs[i_lappd]->Draw("same");
         std::string lappd_nr = std::to_string(i_lappd+1);
         std::string lappd_label = lappd_str+lappd_nr;
@@ -596,7 +594,7 @@ bool EventDisplay::Execute(){
     leg_time->AddEntry(time_LAPPDs[max_lappd_time],lappd_label.c_str());
     for (int i_lappd=1;i_lappd<n_lappds;i_lappd++){
       if (i_lappd == max_lappd_time) continue;
-      if ((lappds_selected && act_lappds[i_lappd]==1)|| !lappds_selected){
+      if ((lappds_selected && active_lappds_user.count(i_lappd)==1)|| !lappds_selected){
         time_LAPPDs[i_lappd]->Draw("same");
         std::string lappd_nr = std::to_string(i_lappd+1);
         std::string lappd_label = lappd_str+lappd_nr;
@@ -1095,14 +1093,17 @@ void EventDisplay::draw_event_box(){
       double y[1];
       double charge_single=1.;        //FIXME when charge is implemented in LoadWCSimLAPPD
       bool draw_lappd_markers=false;
-      for (int i_lappd_hits=0;i_lappd_hits<hits_LAPPDs.size();i_lappd_hits++){
-        for (int i_single_lappd=1;i_single_lappd<hits_LAPPDs.at(i_lappd_hits).size();i_single_lappd++){     //start at 1 to avoid the default fill of the first entry with zero vector
-          double time_lappd_single = time_lappd.at(i_lappd_hits).at(i_single_lappd-1);
+      std::map<unsigned long,std::vector<Position>>::iterator lappd_hit_pos_it = hits_LAPPDs.begin();
+      for(auto&& these_lappd_hit_positions : hits_LAPPDs){
+        unsigned long detkey = these_lappd_hit_positions.first;
+        for (int i_single_lappd=0; i_single_lappd<these_lappd_hit_positions.second.size(); i_single_lappd++){
+          double time_lappd_single = time_lappd.at(detkey).at(i_single_lappd);
           if (charge_single<threshold_lappd || (threshold_time_high!=-999 && time_lappd_single>threshold_time_high) || (threshold_time_low!=-999 && time_lappd_single<threshold_time_low)) continue; 
           draw_lappd_markers=true;
-          double x_lappd = hits_LAPPDs.at(i_lappd_hits).at(i_single_lappd).X();
-          double y_lappd = hits_LAPPDs.at(i_lappd_hits).at(i_single_lappd).Y();
-          double z_lappd = hits_LAPPDs.at(i_lappd_hits).at(i_single_lappd).Z();
+          
+          double x_lappd = hits_LAPPDs.at(detkey).at(i_single_lappd).X();
+          double y_lappd = hits_LAPPDs.at(detkey).at(i_single_lappd).Y();
+          double z_lappd = hits_LAPPDs.at(detkey).at(i_single_lappd).Z();
           if (x_lappd>0 && z_lappd>0) phi = atan(z_lappd/x_lappd)+TMath::Pi()/2;
           else if (x_lappd>0 && z_lappd<0) phi = atan(x_lappd/-z_lappd);
           else if (x_lappd<0 && z_lappd<0) phi = 3*TMath::Pi()/2+atan(z_lappd/x_lappd);
