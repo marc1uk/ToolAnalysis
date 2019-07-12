@@ -14,8 +14,18 @@ def Initialise(pyinit):
         global random
         global csv
         global matplotlib
+        global pyplot
         global array
         global sklearn
+        global datasets
+        global metrics
+        global model_selection
+        global preprocessing
+        global keras
+        global Sequential
+        global Dense
+        global ModelCheckpoint
+        global KerasRegressor
         importlib = __import__('importlib')
         Store = __import__('Store', globals(), locals())
         sys = __import__('sys', globals(), locals())
@@ -28,6 +38,7 @@ def Initialise(pyinit):
         csv = __import__('csv', globals(), locals())
         matplotlib = __import__('matplotlib', globals(), locals())
         matplotlib.use('Agg')
+        pyplot = __import__('matplotlib.pyplot',globals(),locals(),['matplotlib'])
         array = __import__('array',globals(), locals(),fromlist=['array'])
         sklearn = __import__('sklearn', globals(), locals())
         _datasets = __import__('sklearn', globals(), locals(),['datasets'])
@@ -75,19 +86,26 @@ def Initialise(pyinit):
 #    return 1
 
 def Finalise():
+    print("DNNFineTrackLengthInWater_train.py finalise")
     return 1
 
 def create_model():
+    print("DNNFineTrackLengthInWater_train.py defining Create Model")
     # create model
     model = Sequential()
+    print("DNNFineTrackLengthInWater_train.py Sequential done")
     model.add(Dense(50, input_dim=2203, kernel_initializer='he_normal', activation='relu'))
+    print("Addded first layer, adding more")
     model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
     model.add(Dense(1, kernel_initializer='he_normal', activation='relu'))
     # Compile model
+    print("Compiling model")
     model.compile(loss='mean_squared_error', optimizer='Adamax', metrics=['accuracy'])
+    print("returning model")
     return model
 
 def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
+    print("DNNFineTrackLengthInWater_train.py Executing")
     # train the model
     # Set TF random seed to improve reproducibility
     seed = 150
@@ -98,14 +116,19 @@ def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     if Toolchain:
         trainingdatafilename = Store.GetStoreVariable('Config','TrackLengthTrainingDataFile')
     # open the file
+    print("opening training file "+trainingdatafilename)
     trainingfile = open(trainingdatafilename)
     print("evts for training in: ",trainingfile)
     # read into a pandas structure
+    print("reading file with pandas")
     trainingfiledata = pandas.read_csv(trainingfile)
+    print("closing file")
     trainingfile.close()
     # convert to 2D numpy array
+    print("converting to numpy array")
     TrainingDataset = numpy.array(trainingfiledata)
     # split the numpy array up into sub-arrays
+    print("splitting up into features, labels etc")
     features, lambdamax, labels, rest = numpy.split(TrainingDataset,[2203,2204,2205],axis=1)
     # This puts splits the arrays column-wise as follows:
     # 0-2202 into 'features', element 2203 into 'lambdamax', 2204 into 'labels' and 2205+ into 'rest'
@@ -126,22 +149,27 @@ def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     print("train sample features shape: ", train_x.shape," train sample label shape: ", train_y.shape)
 
     # Scale the training set to 0 mean and unit standard deviation.
+    print("scaling to 0 mean and unit std-dev")
     scaler = preprocessing.StandardScaler()
     train_x = scaler.fit_transform(train_x)
     
     # Construct the DNN model
+    print("constructing KerasRegressor")
     estimator = KerasRegressor(build_fn=create_model, epochs=10, batch_size=2, verbose=0)
 
     # load weights
     if Toolchain:
         weightsfilename = Store.GetStoreVariable('Config','TrackLengthWeightsFile')
+    print("setting up checkpoint callback to save weights to "+weightsfilename)
     checkpoint = ModelCheckpoint(weightsfilename, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto')
     callbacks_list = [checkpoint]
     # Run the model
     print('training....')
     history = estimator.fit(train_x, train_y, validation_split=0.33, epochs=10, batch_size=2, callbacks=callbacks_list, verbose=0)
+    print("done training")
 
     # summarize history for loss
+    print("making loss plots")
     f, ax2 = matplotlib.pyplot.subplots(1,1)
     ax2.plot(history.history['loss'])
     ax2.plot(history.history['val_loss'])
@@ -152,10 +180,13 @@ def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     ax2.legend(['loss', 'val_loss'], loc='upper left')
     matplotlib.pyplot.savefig("../LocalFolder/keras_DNN_training_loss.pdf")
 
+    print("DNNFindTrackLengthInWater_train.py returning from Execute")
     return 1
 
 if __name__ == "__main__":
     # Make the script runnable as a standalone python script too?
+    print("DNNFindTrackLengthInWater_train.py called as main")
     trainingdatafilename = '../LocalFolder/DNN_training_input.csv'
     weightsfilename = '../LocalFolder/weights_bets.hdf5'
+    print("calling Execute with training data "+trainingdatafilename+" to save weights to "+weightsfilename)
     Execute(False, trainingdatafilename, weightsfilename)
