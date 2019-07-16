@@ -165,6 +165,15 @@ bool WriteTrainingCsvFiles::Execute(){
   m_data->Stores.at("EnergyReco")->Get("deltaVtxR",deltaVtxR);
   m_data->Stores.at("EnergyReco")->Get("deltaAngle",deltaAngle);
   
+  if(lambda_vector.size()!=maxhits0){
+    Log("WriteTrainingCsvFile Tool: Error! lambdavector size is not maxhits0! Check dimensions!",v_error,verbosity);
+    return false;
+  }
+  if(digitT.size()!=maxhits0){
+    Log("WriteTrainingCsvFile Tool: Error! digitT size is not maxhits0! Check dimensions!",v_error,verbosity);
+    return false;
+  }
+  
   // Write to .csv file
   // ==================
   // pick which file to write to

@@ -1,12 +1,36 @@
 ##### Script To Validate DNN for Track Length Reconstruction in the water tank
+# bend over backwards for reproducible results
+# see https://keras.io/getting-started/faq/#how-can-i-obtain-reproducible-results-using-keras-during-development
+import numpy
+import tensorflow
+import random
+# The below is necessary for starting Numpy generated random numbers
+# in a well-defined initial state.
+numpy.random.seed(0) #42)
+# The below is necessary for starting core Python generated random numbers
+# in a well-defined state.
+random.seed(12345)
+# Force TensorFlow to use single thread.
+# Multiple threads are a potential source of non-reproducible results.
+# For further details, see: https://stackoverflow.com/questions/42022950/
+session_conf = tensorflow.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+from tensorflow.keras import backend as K
+# The below tf.set_random_seed() will make random number generation
+# in the TensorFlow backend have a well-defined initial state.
+# For further details, see:
+# https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+tensorflow.set_random_seed(1234)
+sess = tensorflow.Session(graph=tensorflow.get_default_graph(), config=session_conf)
+K.set_session(sess)
+
 import Store
 import sys
 import glob
-import numpy #as np
+#import numpy #as np
 import pandas #as pd
-import tensorflow #as tf
+#import tensorflow #as tf
 import tempfile
-import random
+#import random
 import csv
 import matplotlib
 matplotlib.use('Agg')
@@ -23,51 +47,11 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import backend as K
 
-#import sys
-#def load(name):
-#        if name in sys.modules: # and name not in self.plugins:
-#            # already loaded: return it from sys.modules and add it to our list
-#            module = sys.modules[name]
-#        else:
-#            #module = importlib.import_module(name)
-#            module = __import__(name)
-#        self.plugins.add(name)
-#        return module
-
 import pprint
 def Initialise(pyinit):
     print("Initialising DNNFindTrackLengthInWater_test.py")
     #print("Listing what's in globals")
     #pprint.pprint(globals())
-#    if (pyinit==1):
-#        print("importing all the things")
-#        #from myimports import *
-#        import myimports
-#    else:
-#        print("skipping the import")
-#    
-#    import Store
-#    import sys
-#    import glob
-#    import numpy as np
-#    import pandas as pd
-#    import tensorflow as tf
-#    import tempfile
-#    import random
-#    import csv
-#    import matplotlib
-#    matplotlib.use('Agg')
-#    import matplotlib.pyplot as plt
-#    from array import array
-#    from sklearn import datasets
-#    from sklearn import metrics
-#    from sklearn import model_selection
-#    from sklearn import preprocessing
-#    from tensorflow import keras
-#    from tensorflow.keras.models import Sequential
-#    from tensorflow.keras.layers import Dense
-#    from tensorflow.keras.callbacks import ModelCheckpoint
-#    from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
     return 1
 
 def Finalise():
@@ -120,9 +104,9 @@ def Execute(Toolchain=True, testingdatafilename=None, weightsfilename=None, pred
     print("defining the model")
     model = Sequential()
     print("adding layers")
-    model.add(Dense(50, input_dim=2203, kernel_initializer='he_normal', activation='relu'))
-    model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
-    model.add(Dense(1, kernel_initializer='he_normal', activation='relu'))
+    model.add(Dense(25, input_dim=2203, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(25, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(1, kernel_initializer='normal', activation='relu'))
 
     # load weights
     if Toolchain:
@@ -185,8 +169,8 @@ def Execute(Toolchain=True, testingdatafilename=None, weightsfilename=None, pred
         testfiledata.to_csv(predictionsdatafilename, float_format = '%.3f')
     else:
         print("writing split data to files "+predictionsdatafilename+" and "+predictionsdatafilename2)
-        testfiledata[firstfilesentries:].to_csv(predictionsdatafilename, float_format = '%.3f')
-        testfiledata[:firstfilesentries].to_csv(predictionsdatafilename2, float_format = '%.3f')
+        testfiledata[:firstfilesentries].to_csv(predictionsdatafilename, float_format = '%.3f')
+        testfiledata[firstfilesentries:].to_csv(predictionsdatafilename2, float_format = '%.3f')
 
     print("clearing session")
     K.clear_session()

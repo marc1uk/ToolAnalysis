@@ -1,89 +1,51 @@
 ##### Script to Train DNN for Track Length Reconstruction in the water tank
+# bend over backwards for reproducible results
+# see https://keras.io/getting-started/faq/#how-can-i-obtain-reproducible-results-using-keras-during-development
+import numpy
+import tensorflow
+import random
+# The below is necessary for starting Numpy generated random numbers
+# in a well-defined initial state.
+numpy.random.seed(0)
+# The below is necessary for starting core Python generated random numbers
+# in a well-defined state.
+random.seed(12345)
+# Force TensorFlow to use single thread.
+# Multiple threads are a potential source of non-reproducible results.
+# For further details, see: https://stackoverflow.com/questions/42022950/
+session_conf = tensorflow.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+from tensorflow.keras import backend as K
+# The below tf.set_random_seed() will make random number generation
+# in the TensorFlow backend have a well-defined initial state.
+# For further details, see:
+# https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+tensorflow.set_random_seed(1234)
+sess = tensorflow.Session(graph=tensorflow.get_default_graph(), config=session_conf)
+K.set_session(sess)
+
+import Store
+import sys
+import glob
+import pandas #as pd
+import tempfile
+import csv
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot #as plt
+from array import array
+from sklearn import datasets
+from sklearn import metrics
+from sklearn import model_selection
+from sklearn import preprocessing
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+
 def Initialise(pyinit):
-    if (pyinit==1):
-        print("importing all the things")
-        #from myimports import *
-#        import myimports
-        global Store
-        global sys
-        global glob
-        global numpy
-        global pandas
-        global tensorflow
-        global tempfile
-        global random
-        global csv
-        global matplotlib
-        global pyplot
-        global array
-        global sklearn
-        global datasets
-        global metrics
-        global model_selection
-        global preprocessing
-        global keras
-        global Sequential
-        global Dense
-        global ModelCheckpoint
-        global KerasRegressor
-        importlib = __import__('importlib')
-        Store = __import__('Store', globals(), locals())
-        sys = __import__('sys', globals(), locals())
-        glob = __import__('glob', globals(), locals())
-        numpy = __import__('numpy', globals(), locals())
-        pandas = __import__('pandas', globals(), locals())
-        tensorflow = __import__('tensorflow', globals(), locals())
-        tempfile = __import__('tempfile', globals(), locals())
-        random = __import__('random', globals(), locals())
-        csv = __import__('csv', globals(), locals())
-        matplotlib = __import__('matplotlib', globals(), locals())
-        matplotlib.use('Agg')
-        pyplot = __import__('matplotlib.pyplot',globals(),locals(),['matplotlib'])
-        array = __import__('array',globals(), locals(),fromlist=['array'])
-        sklearn = __import__('sklearn', globals(), locals())
-        _datasets = __import__('sklearn', globals(), locals(),['datasets'])
-        datasets=_datasets.datasets
-        _metrics = __import__('sklearn', globals(), locals(),['metrics'])
-        metrics=_metrics.metrics
-        _model_selection = __import__('sklearn', globals(), locals(),['model_selection'])
-        model_selection=_model_selection.model_selection
-        _preprocessing = __import__('sklearn', globals(), locals(),['preprocessing'])
-        preprocessing=_preprocessing.preprocessing
-        keras = tensorflow.keras
-        Sequential = keras.models.Sequential
-        Dense = keras.layers.Dense
-        ModelCheckpoint = tensorflow.keras.callbacks.ModelCheckpoint
-        KerasRegressor = keras.wrappers.scikit_learn.KerasRegressor
-
-#        import Store
-#        import sys
-#        import glob
-#        import numpy #as np
-#        import pandas #as pd
-#        import tensorflow #as tf
-#        import tempfile
-#        import random
-#        import csv
-#        import matplotlib
-#        matplotlib.use('Agg')
-#        import matplotlib.pyplot #as plt
-#        from array import array
-#        from sklearn import datasets
-#        from sklearn import metrics
-#        from sklearn import model_selection
-#        from sklearn import preprocessing
-#        from tensorflow import keras
-#        from tensorflow.keras.models import Sequential
-#        from tensorflow.keras.layers import Dense
-#        from tensorflow.keras.callbacks import ModelCheckpoint
-#        from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
-    else:
-        print("skipping the import")
+    print("DNNFindTrackLengthInWater_train.py initializing")
     return 1
-
-
-#def Initialise():
-#    return 1
 
 def Finalise():
     print("DNNFineTrackLengthInWater_train.py finalise")
@@ -94,10 +56,10 @@ def create_model():
     # create model
     model = Sequential()
     print("DNNFineTrackLengthInWater_train.py Sequential done")
-    model.add(Dense(50, input_dim=2203, kernel_initializer='he_normal', activation='relu'))
+    model.add(Dense(25, input_dim=2203, kernel_initializer='normal', activation='relu'))
     print("Addded first layer, adding more")
-    model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
-    model.add(Dense(1, kernel_initializer='he_normal', activation='relu'))
+    model.add(Dense(25, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(1, kernel_initializer='normal', activation='relu'))
     # Compile model
     print("Compiling model")
     model.compile(loss='mean_squared_error', optimizer='Adamax', metrics=['accuracy'])
@@ -106,10 +68,6 @@ def create_model():
 
 def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     print("DNNFineTrackLengthInWater_train.py Executing")
-    # train the model
-    # Set TF random seed to improve reproducibility
-    seed = 150
-    numpy.random.seed(seed)
 
     #--- events for training - MC events
     # get training data file path from store
@@ -141,7 +99,6 @@ def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     print(features[0])
     num_events, num_pixels = features.shape
     print(num_events, num_pixels)
-    numpy.random.seed(0)
     
     # rename variables for obfuscation
     train_x = features
@@ -179,6 +136,10 @@ def Execute(Toolchain=True, trainingdatafilename=None, weightsfilename=None):
     #ax2.set_xlim(0.,10.)
     ax2.legend(['loss', 'val_loss'], loc='upper left')
     matplotlib.pyplot.savefig("../LocalFolder/keras_DNN_training_loss.pdf")
+
+#    print("clearing session")
+#    K.clear_session()
+#    K.get_session().close()
 
     print("DNNFindTrackLengthInWater_train.py returning from Execute")
     return 1

@@ -14,5 +14,5 @@ TrackLengthPredictionsDataFile ../LocalFolder/BDT_training_input.csv
 # To do so, provide the number of events to put into the training file, then subsequent
 # events will go into the testing file.
 # To write all predictions to a single file, pass 0 or give no BDT testing filename
-FirstFileEntries 1000
+FirstFileEntries 10000
 TrackLengthPredictionsDataFile2 ../LocalFolder/BDT_testing_input.csv
