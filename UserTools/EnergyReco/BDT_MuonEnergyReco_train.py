@@ -67,19 +67,20 @@ def Execute(Toolchain=True, trainingdatafilename=None, E_threshold=None, modelfi
     
     ########### BDTG ############
     # build model
-    n_estimators=1000
-    params = {'n_estimators':n_estimators, 'max_depth': 50,
-              'learning_rate': 0.01, 'loss': 'lad'}
+    n_estimators=500
+    params = {'n_estimators':n_estimators, 'max_depth': 10,
+              'learning_rate': 0.05, 'loss': 'lad'}
     
     # train
     print("training BDTG...")
     net_hi_E = ensemble.GradientBoostingRegressor(**params)
-    model = net_hi_E.fit(features_train, labels_train)  # n.b. returns self: model==net_hi_E
+    model = net_hi_E.fit(features_train, labels_train.reshape(-1))  # n.b. returns self: model==net_hi_E
     net_hi_E
 
     # save the model to disk
     if Toolchain:
         modelfilename = Store.GetStoreVariable('Config','BDTMuonModelFile')
+    print("saving model to ",modelfilename)
     pickle.dump(model, open(modelfilename, 'wb'))
     
     return 1

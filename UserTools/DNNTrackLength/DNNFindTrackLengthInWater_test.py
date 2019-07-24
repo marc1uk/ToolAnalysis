@@ -48,7 +48,8 @@ from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 from tensorflow.keras import backend as K
 
 import pprint
-def Initialise(pyinit):
+#def Initialise(pyinit):
+def Initialise():
     print("Initialising DNNFindTrackLengthInWater_test.py")
     #print("Listing what's in globals")
     #pprint.pprint(globals())

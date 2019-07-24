@@ -43,7 +43,8 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
 
-def Initialise(pyinit):
+#def Initialise(pyinit):
+def Initialise():
     print("DNNFindTrackLengthInWater_train.py initializing")
     return 1
 
