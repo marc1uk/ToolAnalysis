@@ -35,13 +35,32 @@ RootLib=  -L $(ToolDAQPath)/root-6.06.08/install/lib `root-config --glibs` -lCor
 
 RawViewerLib= -L UserTools/PlotWaveforms -lRawViewer
 
+ImGuiPath=$(ToolDAQPath)/imgui
+ImGuiSrcs= $(ImGuiPath)/examples/imgui_impl_sdl.cpp $(ImGuiPath)/examples/imgui_impl_opengl2.cpp $(ImGuiPath)/examples/example_imtui/imtui-impl-text.cpp $(ImGuiPath)/examples/example_imtui/imtui-impl-ncurses.cpp $(ImGuiPath)/imgui.cpp $(ImGuiPath)/imgui_demo.cpp $(ImGuiPath)/imgui_draw.cpp $(ImGuiPath)/imgui_widgets.cpp
+ImGuiInclude= -I$(ImGuiPath)/ -I$(ImGuiPath)/examples/ -I$(ImGuiPath)/examples/example_imtui/include/
+ImGuiLib= -lGL -ldl `sdl2-config --libs` -lncurses -ltinfo
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S), Linux) #LINUX
+	ImGuiLib += -lGL -ldl `sdl2-config --libs`
+	ImGuiInclude += `sdl2-config --cflags`
+endif
+ifeq ($(UNAME_S), Darwin) #APPLE
+	ImGuiLib += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	ImGuiLib += -L/usr/local/lib -L/opt/local/lib
+	ImGuiInclude += `sdl2-config --cflags`
+	ImGuiInclude += -I/usr/local/include -I/opt/local/include
+endif
+ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+	ImGuiLib += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+	ImGuiInclude += `pkg-config --cflags sdl2`
+endif
 
 DataModelInclude = $(RootInclude)
 DataModelLib = $(RootLib)
 
 
-MyToolsInclude =  $(RootInclude) `python3.6-config --cflags` $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(GenieInclude) $(Log4CppInclude)
-MyToolsLib = -lcurl $(RootLib) `python3.6-config --libs` $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(GenieLibs) $(PythiaLibs) $(Log4CppLibs)
+MyToolsInclude =  $(RootInclude) `python3.6-config --cflags` $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(GenieInclude) $(Log4CppInclude) $(ImGuiInclude)
+MyToolsLib = -lcurl $(RootLib) `python3.6-config --libs` $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(GenieLibs) $(PythiaLibs) $(Log4CppLibs) $(ImGuiLib)
 
 
 all: lib/libStore.so lib/libLogging.so lib/libDataModel.so include/Tool.h lib/libMyTools.so lib/libServiceDiscovery.so lib/libToolChain.so Analyse RemoteControl NodeDaemon
@@ -71,7 +90,7 @@ lib/libToolChain.so: $(ToolDAQPath)/ToolDAQFramework/src/ToolChain/* | lib/libLo
 	@echo -e "/n*************** Making " $@ "****************"
 	cp $(ToolDAQPath)/ToolDAQFramework/UserTools/Factory/*.h include/
 	cp $(ToolDAQPath)/ToolDAQFramework/src/ToolChain/*.h include/
-	$(CC) $(ToolDAQPath)/ToolDAQFramework/src/ToolChain/ToolChain.cpp -I include -lpthread -L lib -lStore -lDataModel -lServiceDiscovery -lLogging -o lib/libToolChain.so $(DataModelInclude) $(DataModelLib) $(ZMQLib) $(ZMQInclude) $(MyToolsInclude)  $(BoostLib) $(BoostInclude)
+	$(CC) $(ToolDAQPath)/ToolDAQFramework/src/ToolChain/ToolChain.cpp -I include -lpthread -L lib -lStore -lDataModel -lServiceDiscovery -lLogging -o lib/libToolChain.so $(DataModelInclude) $(DataModelLib) $(ZMQLib) $(ZMQInclude) $(MyToolsInclude)  $(BoostLib) $(BoostInclude) $(ImGuiInclude) $(ImGuiLib)
 
 
 clean: 
@@ -92,7 +111,7 @@ lib/libMyTools.so: UserTools/*/* UserTools/* include/Tool.h lib/libLogging.so li
 	cp -f UserTools/*/*.h include/
 	cp -f UserTools/*.h include/
 	#$(CC)  UserTools/Factory/Factory.cpp -I include -L lib -lStore -lDataModel -lLogging -o lib/libMyTools.so $(MyToolsInclude) $(MyToolsLib) $(DataModelInclude) $(DataModelib) $(ZMQLib) $(ZMQInclude) $(BoostLib) $(BoostInclude)
-	$(CC) UserTools/*/*.o -I include -L lib -lStore -lDataModel -lLogging -o lib/libMyTools.so $(MyToolsInclude) $(DataModelInclude) $(MyToolsLib) $(ZMQLib) $(ZMQInclude) $(BoostLib) $(BoostInclude)
+	$(CC) UserTools/*/*.o -I include -L lib -lStore -lDataModel -lLogging -o lib/libMyTools.so $(MyToolsInclude) $(DataModelInclude) $(MyToolsLib) $(ZMQLib) $(ZMQInclude) $(BoostLib) $(BoostInclude) $(ImGuiSrcs)
 
 RemoteControl:
 	cd $(ToolDAQPath)/ToolDAQFramework/ && make RemoteControl

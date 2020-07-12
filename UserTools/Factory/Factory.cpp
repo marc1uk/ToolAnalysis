@@ -115,6 +115,7 @@ if (tool=="TriggerDataDecoder") ret=new TriggerDataDecoder;
 if (tool=="ClusterClassifiers") ret=new ClusterClassifiers;
 if (tool=="MRDLoopbackAnalysis") ret=new MRDLoopbackAnalysis;
 if (tool=="VetoEfficiency") ret=new VetoEfficiency;
+if (tool=="GuiDemo") ret=new GuiDemo;
 
 return ret;
 }

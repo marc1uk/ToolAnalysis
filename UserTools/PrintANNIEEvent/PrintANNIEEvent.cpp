@@ -24,7 +24,7 @@ bool PrintANNIEEvent::Execute(){
 	
 	if(verbose) cout<<"executing PrintANNIEEvent"<<endl;
 	int annieeventexists = m_data->Stores.count("ANNIEEvent");
-	if(!annieeventexists){ cerr<<"no ANNIEEvent store!"<<endl; /*return false;*/};
+	if(!annieeventexists){ cerr<<"no ANNIEEvent store!"<<endl; return false;};
 	//m_data->Log->Log(logmessage.str(),1,verbose);
 	//logmessage.str(""); ??
 	
