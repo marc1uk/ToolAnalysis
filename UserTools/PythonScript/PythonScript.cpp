@@ -49,8 +49,8 @@ bool PythonScript::Initialise(std::string configfile, DataModel &data){
   m_data->CStore.Set("PythonInit",pyinit);
   
   /// Starting python thread for this tool
-  pythread=Py_NewInterpreter();  
-  PyThreadState_Swap(pythread);
+  //pythread=Py_NewInterpreter();  
+  //PyThreadState_Swap(pythread);
 
   // Loading store API into python env
 //  Py_InitModule("Store", StoreMethods);
@@ -145,7 +145,7 @@ bool PythonScript::Execute(){
   // make the config Store for this script accessible to the tool, should it need it in Execute
   gconfig=&thisscriptsconfigstore;
 
-  PyThreadState_Swap(pythread);
+  //PyThreadState_Swap(pythread);
 
   if (pModule != NULL) {
 
@@ -192,7 +192,7 @@ bool PythonScript::Finalise(){
   // make the config Store for this script accessible to the tool, should it need it in Finalise
   gconfig=&thisscriptsconfigstore;
   
-  PyThreadState_Swap(pythread);  
+  //PyThreadState_Swap(pythread);  
   
   if (pModule != NULL) {
     
