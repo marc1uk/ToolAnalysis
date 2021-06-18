@@ -9,7 +9,6 @@
 #include <map>
 #include "DataModel.h"
 #include "BoostStore.h"
-#include "type_name_as_string.h"
 
 //#include <regex>
 #include <boost/regex.hpp> // since std::regex doesn't work
@@ -43,8 +42,8 @@ struct StoreWrapper{
   };
   template <typename T>
   bool Get(std::false_type, std::string name, T& value){
-    std::cout<<"StoreWrapper::Get called on non-ASCII type "
-             <<boost::core::demangle(typeid(value).name())<<std::endl;
+    //std::cout<<"StoreWrapper::Get called on non-ASCII type "
+    //         <<boost::core::demangle(typeid(value).name())<<std::endl;
     if(boost_store){ return boost_store->Get(name,value);
     } else if(ascii_store){
       std::cerr<<"StoreWrapper::Get called to return object of type "
@@ -61,9 +60,9 @@ struct StoreWrapper{
     constexpr bool t_is_ascii_compatible = 
         std::is_fundamental<T>::value || std::is_same<T, std::string>::value;
     using tag = std::integral_constant<bool, t_is_ascii_compatible>;
-    std::cout<<"StoreWrapper Get called with type "<<boost::core::demangle(typeid(value).name())
-             <<" with tag "<<boost::core::demangle(typeid(tag).name())<<std::endl;
-    StoreWrapper::Get(tag{}, name, value);
+    //std::cout<<"StoreWrapper Get called with type "<<boost::core::demangle(typeid(value).name())
+    //         <<" with tag "<<boost::core::demangle(typeid(tag).name())<<std::endl;
+    return StoreWrapper::Get(tag{}, name, value);
   }
   
   template<typename T>
@@ -76,14 +75,14 @@ struct StoreWrapper{
   void Set(std::false_type, std::string name, T& value){
     if(boost_store){ boost_store->Set(name,value);
     } else if(ascii_store){
-      std::cerr<<"StoreWrapper::Set called to set object of type "<<type_name<decltype(value)>()
+      std::cerr<<"StoreWrapper::Set called to set object of type "<<boost::core::demangle(typeid(value).name())
                <<" but requested store is an ASCII store, and cannot store objects of this type"<<std::endl;
     } else {
       std::cerr<<"Set call on uninitialized StoreWrapper!"<<std::endl;
     }
   };
   template <typename T>
-  bool Set(std::string name, T& value){
+  void Set(std::string name, T& value){
     constexpr bool t_is_ascii_compatible = 
         std::is_fundamental<T>::value || std::is_same<T, std::string>::value;
     using tag = std::integral_constant<bool, t_is_ascii_compatible>;
@@ -145,8 +144,8 @@ template<typename T> PyObject* GetStoreVariable(std::string variablename, T temp
              <<" not in type conversion map"<<std::endl;
              return NULL;
   }
-  std::cout<<"gneral match of basic types, including vectors and pointers"<<std::endl;
-  std::cout<<"isvector="<<isvector<<", isptr="<<isptr<<std::endl;
+  //std::cout<<"gneral match of basic types, including vectors and pointers"<<std::endl;
+  //std::cout<<"isvector="<<isvector<<", isptr="<<isptr<<std::endl;
   /// get the format string describing the python type
   const char* python_type = typename_to_python_type.at(thetypename).c_str();
   //std::cout<<"python type is "<<python_type<<std::endl;
