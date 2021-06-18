@@ -1,0 +1,2 @@
+test1 DummyTool configfiles/PythonStoreTest/DummyToolConfig
+mypthon PythonScript configfiles/PythonStoreTest/PythonScriptConfig

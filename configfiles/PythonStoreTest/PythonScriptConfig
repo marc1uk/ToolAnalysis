@@ -1,0 +1,5 @@
+PythonScript PythonStoreTest
+InitialiseFunction Initialise
+ExecuteFunction Execute
+FinaliseFunction Finalise
+ConfigurationsFile configfiles/PythonStoreTest/PythonScriptConfig
