@@ -11,6 +11,8 @@ bool DummyTool::Initialise(std::string configfile, DataModel &data){
   m_data= &data;
  
   m_variables.Get("verbose",m_verbose);
+  int state=99;
+  m_data->CStore.Set("state",state);
  
   Log("test 1",1,m_verbose);
 
