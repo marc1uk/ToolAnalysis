@@ -1,6 +1,6 @@
 #include "DataModel.h"
 
-DataModel::DataModel(){}
+DataModel::DataModel() : postgres(this){}
 
 /*
 TTree* DataModel::GetTTree(std::string name){
