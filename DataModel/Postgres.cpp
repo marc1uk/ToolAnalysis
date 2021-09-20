@@ -429,7 +429,7 @@ std::string Postgres::GetToolConfig(std::string toolname, int versionnum, std::s
 }
 
 // XXX reminder that pqxx::result is a reference-counting wrapper and is not thread-safe! XXX
-bool Postgres::ExecuteQuery(std::string query, int nret, pqxx::result* res, pqxx::row* row){
+bool Postgres::Query(std::string query, int nret, pqxx::result* res, pqxx::row* row){
 	// maybe this is redundant since OpenConnection will check is_open (against recommendations)
 	for(int tries=0; tries<2; ++tries){
 		// ensure we have a connection to work with

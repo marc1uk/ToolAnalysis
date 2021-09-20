@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <typeinfo>
 #include <cxxabi.h>  // demangle
+#include "type_name_as_string.h"
 
 class DataModel;
 
@@ -32,7 +33,7 @@ class Postgres {
 	// wrapper around exec since we handle the transaction and connection.
 	// nret specifies the expected number of returned rows from the query.
 	// res and row are outputs. return value is success.
-	bool ExecuteQuery(std::string query, int nret, pqxx::result* res=nullptr, pqxx::row* row=nullptr);
+	bool Query(std::string query, int nret, pqxx::result* res=nullptr, pqxx::row* row=nullptr);
 	
 	private:
 	int verbosity=1;
@@ -74,10 +75,10 @@ class Postgres {
 		// into a parameter pack. the passed arguments
 		// must be compatible with the returned columns
 		pqxx::row local_row;
-		bool success = ExecuteQuery(query_string, 1, nullptr, &local_row);
+		bool success = Query(query_string, 1, nullptr, &local_row);
 		if(not success) return false; // query failed
 		
-		success = ExpandRow<sizeof...(Ts), Ts...>::expand(local_row, std::forward<Ts...>(rets...));
+		success = ExpandRow<sizeof...(Ts), Ts&&...>::expand(local_row, std::forward<Ts>(rets)...);
 	}
 	
 	////////
@@ -85,11 +86,14 @@ class Postgres {
 	// to populate a parameter pack
 	template<std::size_t N, typename T, typename... Ts>
 	struct ExpandRow {
-		static bool expand(const pqxx::row& row, T last, Ts&... out){
-			bool ok = ExpandRow<N-1, Ts...>::expand(row, out...);
+		static bool expand(const pqxx::row& row, T& last, Ts&... out){
+			//std::cout << __PRETTY_FUNCTION__ << "\n";
+			bool ok = ExpandRow<N-1, Ts...>::expand(row, std::forward<Ts>(out)...);
 			if(not ok) return false; // do not attempt further expansion.... i mean, we could...?
 			try{
-				row[pqxx::row::size_type(N-1)].to(last);
+			//	std::cout<<"extracting argument "<<(row.size()-pqxx::row::size_type(N))<<" to variable of type "
+			//	         <<type_name<decltype(last)>()<<std::endl;
+				row[row.size()-pqxx::row::size_type(N)].to(last);
 			}
 			catch (const pqxx::sql_error &e){
 				std::cerr << e.what() << std::endl
@@ -98,16 +102,16 @@ class Postgres {
 					std::cerr << ", with SQLSTATE error code: " << e.sqlstate();
 				}
 				std::cerr<<std::endl;
-				std::cerr<<"Postgres::ExpandRow failed to convert sql return field 0 to output type "
-				         <<abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr)
-				         <<std::endl;
+				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "
+				         <<(row.size()-pqxx::row::size_type(N))<<" to output type "
+				         <<type_name<decltype(last)>()<<std::endl;
 				return false;
 			}
 			catch (std::exception const &e){
 				std::cerr << e.what() << std::endl;
-				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "<<(N-1)<<" to output type "
-				         <<abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr)
-				         <<std::endl;
+				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "
+				         <<(row.size()-pqxx::row::size_type(N))<<" to output type "
+				         <<type_name<decltype(last)>()<<std::endl;
 				return false;
 			}
 		}
@@ -116,8 +120,11 @@ class Postgres {
 	template<typename T>
 	struct ExpandRow<1, T> {
 		static bool expand(const pqxx::row& row, T& out){
+			//std::cout << __PRETTY_FUNCTION__ << "\n";
 			try{
-				row[0].to(out);
+				//std::cout<<"extracting last argument "<<(row.size()-1)<<" to variable of type "
+				//         <<type_name<decltype(out)>()<<std::endl;
+				row[row.size()-1].to(out);
 			}
 			catch (const pqxx::sql_error &e){
 				std::cerr << e.what() << std::endl
@@ -126,12 +133,15 @@ class Postgres {
 					std::cerr << ", with SQLSTATE error code: " << e.sqlstate();
 				}
 				std::cerr<<std::endl;
-				std::cerr<<"Postgres::ExpandRow failed to convert sql return field 0 to output type "
-				         <<abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr)
-				         <<std::endl;
+				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "<<(row.size()-1)
+				         <<" to output type "<<type_name<decltype(out)>()<<std::endl;
 				return false;
 			}
-			catch (...){
+			catch(std::exception const &e){
+				std::cerr << e.what() << std::endl;
+				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "
+				         <<(row.size()-1)<<" to output type "
+				         <<type_name<decltype(out)>()<<std::endl;
 			}
 			return true;
 		}

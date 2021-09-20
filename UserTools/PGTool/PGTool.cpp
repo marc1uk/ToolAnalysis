@@ -56,6 +56,25 @@ bool PGTool::Initialise(std::string configfile, DataModel &data){
 	// that's it. Print contents to check.
 	m_variables.Print();
 	
+	// let's now try to run a general database query.
+	// The postgres interface class is used to execute the query, and returns the results directly
+	// into end-user variables: `m_data->postgres.ExecuteQuery(query, output1, output2...);`
+	// Any number of outputs can be given, of arbitrary types, but they must of course match what
+	// will be returned from the query.
+	// For now, this only supports queries that return just one row.
+	// TODO extend this interface to support multiple returned rows via vectors or something.
+	std::string query_string = "SELECT id, name, contents FROM configfiles WHERE system = 'lappd'";
+	// variables for the outputs. Types should be appropriate.
+	int out_id;
+	std::string out_name;
+	std::string out_json;
+	std::cout<<"performing ExecuteQuery"<<std::endl;
+	// run the query. variable order should match that SELECTed in the query.
+	m_data->postgres.ExecuteQuery(query_string, out_id, out_name, out_json);
+	
+	std::cout<<"variadic query done, ID was "<<out_id<<", out name was "<<out_name
+	         <<", out_json was "<<out_json<<std::endl;
+	
 	return true;
 }
 
