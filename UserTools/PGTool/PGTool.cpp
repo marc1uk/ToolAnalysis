@@ -71,9 +71,29 @@ bool PGTool::Initialise(std::string configfile, DataModel &data){
 	std::cout<<"performing ExecuteQuery"<<std::endl;
 	// run the query. variable order should match that SELECTed in the query.
 	m_data->postgres.ExecuteQuery(query_string, out_id, out_name, out_json);
-	
+	// print out the results to validate
 	std::cout<<"variadic query done, ID was "<<out_id<<", out name was "<<out_name
 	         <<", out_json was "<<out_json<<std::endl;
+	
+	// For inserting new configuration files we can do the following.
+	// simply define a normal Store
+	Store varstore;
+	// populate with the desired variables
+	int anintvar = 99;                     varstore.Set("myint",anintvar);
+	double adoublevar = 33.32;             varstore.Set("mydouble",adoublevar);
+	std::string astringvar = "oh hello";   varstore.Set("mystring",astringvar);
+	// and pass it to the Postgres interface class with all the required metadata
+	std::string thetool = "MyTotallyCoolTool";         // this is your tool's class name
+	std::string systemname  = "lappd";                 // ensure this is a valid system name
+	std::string authorname = "billybob";               // who wrote this config file
+	std::string description = "increase buffer size";  // changes made and why
+	// we won't run the command since it would pollute the database with a dummy entry.
+	/*
+	int versionnum = m_data->postgres.InsertToolConfig(varstore, thetool, authorname, description, systemname);
+	*/
+	// the return will be the version number of the newly created config file entry.
+	// this is automatically assigned as the next free version number
+	// for a configfile entry with the specified system name and tool name.
 	
 	return true;
 }
@@ -211,22 +231,24 @@ bool PGTool::Execute(){
 		
 		// timestamp fields
 		// ----------------
-		// TODO discuss potential formats including using NOW() or c++ date/time utils
-		// at the least, we can use a standardised time format string: YYYY-MM-DD HH:MM:SS,
+		// timestamps can be specified using an appropriately formatted string: YYYY-MM-DD HH:MM:SS,
+		// or the current date+time can be specified by passing the string "NOW()"
 		std::string timestamp = "2020-09-16 20:05:00";                   // 'created' - timestamp field
+		// TODO discuss potential formats including use of c++ date/time utils
 		
 		// bytea fields
 		// ------------
 		// 'bytea' fields can store arbitrary binary data, but in our case we're mostly using
 		// them to store simple text strings of arbitrary length, such as in the description field.
 		// To write text data to bytea fields just using the normal quoting - myTransaction.quote(std::string).
-		std::string jsoncontents = "{ \"PGTool\":2 }";                  // 'contents'    - jsonb field*
 		std::string description = "Here's a dummy config file";         // 'description' - bytea field
+		std::string jsoncontents = "{ \"PGTool\":2 }";                  // 'contents'    - jsonb field*
 		// *see below for discussion of json field handling
 		
-		// n.b. the only reliable way I seem to be able to achieve insertion without
-		// constantly getting syntax errors related to quotes or escaping is to use
-		// a parameterized query.
+		// n.b. the most reliable to achieve insertion without needing to worry about
+		// suitable quoting or escaping is to use a parameterized query. This is done by specifying
+		// placeholders $1, $2 ... in the query, and then using 'pqxx::transaction::exec_params'
+		// with the actual variables holding the data passed as additional arguments:
 		query_string = "INSERT INTO lappd (created, description, configfiles) VALUES ( $1, $2, $3 )";
 		std::cout<<"Testing writing bytea fields with query: \n"<<query_string<<"\n";
 		myTransaction.exec_params(query_string,
@@ -236,14 +258,16 @@ bool PGTool::Execute(){
 		                         );
 		//myTransaction.commit();
 		
-		// For retrieval, we need to get the server convert it back to text or we'll end up with gibberish.
-		// Somewhat unintuitively we do this by *encoding* (not decoding!) the field to 'escape' type.
+		// When retrieving bytea fields holding textual data, we need to convert the stored binary
+		// back into text, or else we'll end up with gibberish.
+		// Perhaps unintuitively we do this by *encoding* (not decoding!) the field to 'escape' type.
 		// https://www.postgresql.org/docs/9.4/functions-binarystring.html
 		// https://www.postgresql.org/docs/9.3/functions-string.html
-		// n.b. since we manipulate the data the returned field name isn't preserved, so we reset it with 'AS'
-		query_string = "SELECT encode(description, 'escape')::text AS description from lappd";
+		// n.b. since the data returned is the output of 'encode' (and not the raw field data)
+		// the queried field name isn't preserved, but we can restore it by aliasing with 'AS'
+		query_string = "SELECT encode(description, 'escape')::text AS description FROM lappd";
 		// we can also use 'convert_from' and specify the locale, e.g. UTF-8
-		query_string = "SELECT convert_from(description, 'UTF-8') as description from lappd";
+		query_string = "SELECT convert_from(description, 'UTF-8') AS description FROM lappd";
 		
 		/*
 		e.g.  (specifying '::bytea' after 'description' is optional)
@@ -268,15 +292,16 @@ bool PGTool::Execute(){
 		results = myTransaction.exec(query_string);
 		pqxx::field byteafield = results[0][0];
 		pqxx::binarystring my_bytea_fielddata = pqxx::binarystring(byteafield);
-		// and then do the unscrambling with the pqxx::binarystring::str() method:
-		// n.b. the .str() method appends a trailing '\0' to the data, which is required to properly
-		// terminate std::strings, so be sure to use this and not '.get()' unless you also use '.length()'!
+		// we then do the unscrambling with the pqxx::binarystring::str() method:
+		// n.b. the .str() method appends a trailing '\0' to the data, which is necessary to form a properly
+		// terminated std::string, so be sure to use this and not '.get()' unless you also use '.length()'!
 		std::string unscrambled = my_bytea_fielddata.str();
 		std::cout <<"scrambled description is "<< byteafield.as<string>() <<std::endl;
 		std::cout <<"unscrambled description is '"<< unscrambled <<"'"<<std::endl;
 		
 		/*
 		// N.B. we can avoid having to explicitly convert every time by creating a VIEW:
+		// This modifies the database structure, so ask your friendly db admin before doing this!
 		psql -c "CREATE VIEW lappd_view AS " \
 		        " SELECT id, created, encode(description::bytea, 'escape') as description, configfiles " \
 		        "FROM lappd; "
@@ -349,7 +374,7 @@ bool PGTool::Execute(){
 		std::string astore_json; astore >> astore_json;
 		query_string = "INSERT INTO lappd (created, configfiles, description) VALUES ( $1, $2, $3 )";
 		// run it
-		std::cout<<"testing writing Store json data with query: \n"<<query_string<<"\n"<<std::endl;
+		std::cout<<"testing writing Store json data with query: \n"<<query_string<<std::endl;
 		myTransaction.exec_params(query_string,
 		                         timestamp,
 		                         astore_json,
@@ -359,27 +384,17 @@ bool PGTool::Execute(){
 		
 		// handling binary data
 		// ---------------------
-		// to insert binary data we again use pqxx::binarystring, building this time from
+		// to insert binary data we again use pqxx::binarystring, this time building it from
 		// a pointer to the underlying data and its size
 		// (n.b. the pointed-to data must be contiguous, so e.g. objects shouldn't contain pointers to data)
+		// XXX NOTE: this includes std::containers such as XXX std::string XXX, std::vector etc, along with
+		// anything else that internally holds such objects (such as Stores). char arrays are fine.
 		std::cout<<"building a struct to test binary data\n";
 		struct mystruct{
-			int anint; double adub; std::string ss; Store astore;
-			mystruct() : anint(12), adub(22.3), ss("potatoe"){ Fill(); }
-			void Fill(){
-				astore.Set("myint",anint); astore.Set("mydub",adub); astore.Set("mys",ss);
-			}
+			int anint; double adub; bool abool; char sss[255]; //std::string ss; // << don't use std::string...!
+			mystruct() : anint(12), adub(22.3), sss{'o','h','\0'}, abool(true) {}
 			void Print(){
-				std::cout<<"anint="<<anint<<", adub="<<adub<<", ss="<<ss<<", Store holds:\n";
-				//astore.Print();   // this crashes because the below line crashes,
-				// which seems to be because m_variables.end() isn't properly set? so it runs off the end...
-				// strangely enough m_variables.size() and m_variables.begin() are both fine,
-				// so we can iterate just fine as long as we stop at the right number of elements...
-				//for(auto&& it=astore.m_variables.begin(); it!=astore.m_variables.end(); ++it){
-				for(int i=0; i<astore.m_variables.size(); ++i){
-					std::map<std::string,std::string>::iterator it=std::next(astore.m_variables.begin(),i);
-					std::cout<< it->first << " => " << it->second <<std::endl;
-				}
+				std::cout<<"anint="<<anint<<", adub="<<adub<<", abool="<<abool<<", acharr="<<sss<<std::endl;
 			}
 		} a_struct;
 		// XXX when constructing a pqxx::binarystring a copy of the underlying data is made XXX
@@ -387,8 +402,8 @@ bool PGTool::Execute(){
 		pqxx::binarystring binarystringdata(&a_struct, sizeof(mystruct));
 		
 		// to insert this into a query we may be able to use pqxx::transaction::esc_raw(mybinarystring)
-		// but it is instead much safer to use a parameterized query. This separates the query arguments
-		// so that we're not trying to embed binary into a string constant.
+		// but again it is MUCH safer to use a parameterized query. This separates the query arguments
+		// so that we're not trying to embed arbitrary binary data into a string constant.
 		// https://libpqxx.readthedocs.io/en/6.4/a01259.html#a08a78072ec1feeea9e86e034ca936fa3
 		query_string = "INSERT INTO configfiles(system, name, version, description, created, author, contents)"
 		               "VALUES ($1, $2, $3, $4, $5, $6, $7)";  // order of $N defines order of arguments
@@ -420,6 +435,26 @@ bool PGTool::Execute(){
 		a_struct.Print();
 		std::cout<<"Output was: ";
 		b_struct->Print();
+		
+		// testing storing multi-line strings into text fields - it works just fine.
+		query_string = "INSERT INTO configfiles(system, name, version, description, created, author, contents)"
+		               "VALUES ($1, $2, $3, $4, $5, $6, $7)";  // order of $N defines order of arguments
+		version=5;
+		toolname="mutliple.\n Lines.\n Woah.\n";
+		std::cout<<"storing configfiles entry with tool name: \n"<<toolname<<std::endl;
+		results = myTransaction.exec_params( query_string,
+		                                     systemname,
+		                                     toolname,
+		                                     version,
+		                                     binarystringdata,
+		                                     timestamp,
+		                                     author,
+		                                     astore_json );
+		
+		// check we can get it back out
+		query_string = "SELECT name FROM configfiles WHERE version = 5";
+		results = myTransaction.exec(query_string);
+		std::cout<<"queried name was "<<results[0][0].as<string>()<<std::endl;
 		
 		std::cout<<"ok done, ending"<<std::endl;
 	}catch (const pqxx::sql_error &e){

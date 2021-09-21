@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <cxxabi.h>  // demangle
 #include "type_name_as_string.h"
+#include "Store.h"
 
 class DataModel;
 
@@ -25,6 +26,7 @@ class Postgres {
 	bool CloseConnection();
 	// get the json string representing a Tool's config variables
 	std::string GetToolConfig(std::string toolname, int versionnum=-1, std::string systemname="");
+	int InsertToolConfig(Store config, std::string toolname, std::string author, std::string description, std::string systemname="");
 	// get the toolchain configuration id for the given system based on the runconfig id and system name
 	bool GetSystemConfig(bool update=true, int* systemconfig_in=nullptr, std::string systemname="", int runconfig=-1);
 	// get the current run number and runconfig id

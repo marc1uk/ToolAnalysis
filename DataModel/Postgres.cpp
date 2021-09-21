@@ -428,6 +428,112 @@ std::string Postgres::GetToolConfig(std::string toolname, int versionnum, std::s
 	return "";
 }
 
+int Postgres::InsertToolConfig(Store config, std::string toolname, std::string author, std::string description, std::string systemname){
+	// insert a new Tool configuration entry
+	try {
+		// ensure we have an open connection to the database
+		OpenConnection();
+		
+		// open a transaction to interact with the database
+		//pqxx::work(*conn);
+		if(verbosity>v_debug) std::cout<<"Opening nontransaction"<<std::endl;
+		pqxx::nontransaction txn(*conn);
+		
+		// each entry in the configfiles table contains:
+		// a tool name,          -
+		// a version number,      |- together these 3 uniquely define a configuration file
+		// a system name         -
+		// an author
+		// a creation timestamp
+		// a description
+		// the config file contents
+		
+		// if no systemname is given, we assume the user means the current system,
+		// the name of which should be in the datamodel.
+		if(systemname==""){
+			get_ok = m_data->vars.Get("system",systemname);
+			if(not get_ok){
+				std::cerr<<"Postgres::InsertToolConfig error! no system name given and none in m_data!"<<std::endl;
+				return false;
+			}
+		} else {
+			// validate that this is a proper system name (we could drop the SELECT EXISTS (...) )
+			std::string query_string = "SELECT EXISTS ( SELECT FROM pg_tables WHERE tablename = 'lappd' )";
+			try {
+				txn.exec1(query_string); // will throw if it doesn't return one entry
+			} catch (pqxx::unexpected_rows &e){
+				std::cerr<<"Postgres::InsertToolConfig Error! system name "<<systemname
+				         <<" does not appear to be a valid system! Exception was: "<<std::endl
+				         <<e.what();
+				return -1;
+			}
+		}
+		
+		// Use the Store streamer to generate the json string
+		std::string json_string;
+		config >> json_string;
+		
+		// version number must be automatically assigned as the next unique version number
+		// to find this out we need to query the database
+		
+		// query the latest version number for this tool
+		std::string query_string = "SELECT max(version) FROM configfiles WHERE system = ";
+		query_string += txn.quote(systemname) + " AND name = "+ txn.quote(toolname);
+		if(verbosity>v_debug){
+			std::cout<<"Querying max version number for tool "<<systemname<<"::"<<toolname<<std::endl;
+		}
+		pqxx::row row = txn.exec1(query_string);
+		int versionnum=-1;
+		if(row.size()>0){
+			versionnum = row[0].as<int>();
+		}
+		if(verbosity>v_debug) std::cout<<"Max version number is "<<versionnum<<std::endl;
+		++versionnum; // our new entry will be the next one up.
+		
+		// creation timestamp will also be automatically generated as NOW()
+		std::string created="NOW()";
+		
+		// build the query
+		query_string = 
+		    "INSERT INTO configfiles ( name, version, system, author, created, description, contents) "
+		    "VALUES ( $1, $2, $3, $4, $5, $6, $7 ) RETURNING id";
+		pqxx::result res = txn.exec_params(query_string,
+		                                   toolname,
+		                                   versionnum,
+		                                   systemname,
+		                                   author,
+		                                   created,
+		                                   description,
+		                                   json_string
+		                                   );
+		// important! commit the result
+		//txn.commit();    // (unless we're use a nontransaction)
+		int new_id = res[0][0].as<int>();
+		
+		// if no exceptions thrown, we're done.
+		return versionnum;   // could also return the ID of the new row
+	}
+	catch (const pqxx::sql_error &e){
+		std::cerr << e.what() << std::endl
+			      << "When executing query: " << e.query();
+		if(e.sqlstate()!=""){
+			std::cerr << ", with SQLSTATE error code: " << e.sqlstate();
+		}
+		std::cerr<<std::endl;
+		// from the discussion on the transactor framework page
+		// (https://libpqxx.readthedocs.io/en/6.3/a00258.html)
+		// it seems transactions can fail for transient reasons.
+		// if for some reason we're not using the transactor framework
+		// but still want to retry the query manually, do that here.
+		// continue;    // along with any other necessary reinitializations and whatnot
+	}
+	catch (std::exception const &e){
+		std::cerr << e.what() << std::endl;
+	}
+	// if we haven't returned true, something went wrong.
+	return -1;
+}
+
 // XXX reminder that pqxx::result is a reference-counting wrapper and is not thread-safe! XXX
 bool Postgres::Query(std::string query, int nret, pqxx::result* res, pqxx::row* row){
 	// maybe this is redundant since OpenConnection will check is_open (against recommendations)
