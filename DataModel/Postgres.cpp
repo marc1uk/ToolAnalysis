@@ -209,9 +209,9 @@ bool Postgres::GetSystemConfig(bool update, int* systemconfig_in, std::string sy
 		pqxx::nontransaction txn(*conn);
 		
 		// based on the system name and run type (i.e. runconfig), look up the system configuration number
-		// columns in the runconfig table follow convention 'systemconfig', e.g. 'daqconfig'/'vmeconfig'
+		// columns in the runconfig table follow their system name, e.g. 'daq'/'vme'/'hv'
 		// XXX note the use of txn.quote_name instead of txn.quote when quoting table/column identifiers!!!
-		std::string query_string = std::string("SELECT ") +txn.quote_name(systemname+"config")  // FIXME remove config
+		std::string query_string = std::string("SELECT ") +txn.quote_name(systemname)
 		                           +" FROM runconfig WHERE id = "+pqxx::to_string(runconfig);
 		// run the query, get the system configuration number
 		if(verbosity>v_debug) std::cout<<"Querying system configuration ID with query: \n"<<query_string<<"\n";

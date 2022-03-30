@@ -23,7 +23,7 @@ psql -c "INSERT INTO run (runnum, subrunnum, start, stop, runconfig, notes) VALU
 // turns out auto-increment default keys start from 1 not 0, so above 'runconfig' id of 0 doesn't match anything.
 psql -c "INSERT INTO run (runnum, subrunnum, start, stop, runconfig, notes) VALUES(1, 0, timestamp '2021-09-17 14:13:00', timestamp '2021-09-17 14:14:00', 1, 'dummy run v2')"
 
-psql -c "INSERT INTO runconfig ( name, created, geometryconfig, daqconfig, vmeconfig, hvconfig, lappdconfig, mrdconfig, description, author) VALUES( 'dummyrun', timestamp '2020-09-16 15:54:00', 0, 0, 0, 0, 0, 0, 'dummy toolchain configuration', 'moflaher')"
+psql -c "INSERT INTO runconfig ( name, created, geometry, daq, vme, hv, lappd, mrd, description, author) VALUES( 'dummyrun', timestamp '2020-09-16 15:54:00', 0, 0, 0, 0, 0, 0, 'dummy toolchain configuration', 'moflaher')"
 
 psql -c "INSERT INTO lappd (created, description, configfiles) VALUES ( timestamp '2020-09-16 15:54:00', 'test toolchain 1', '{\"PGTool\":0, \"OtherTool\":6}'::jsonb )"
 

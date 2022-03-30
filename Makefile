@@ -33,15 +33,22 @@ MrdTrackInclude= -I ToolDAQ/MrdTrackLib/include
 
 RootLib=  -L $(ToolDAQPath)/root-6.06.08/install/lib `root-config --glibs` -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -pthread -lm -ldl -rdynamic -m64 -lGui -lGenVector -lMinuit -lGeom -lEG -lEGPythia6 -lEve #-lGL -lGLEW -lGLU
 
+# hmmm, non-standard postgres install path /usr/pgsql-12/lib...?
+PostgresLib= -L $(ToolDAQPath)/pqxx/install/lib -lpqxx -L /usr/pgsql-12/lib -lpq
+PostgresInclude= -I $(ToolDAQPath)/pqxx/install/include
+
 RawViewerLib= -L UserTools/PlotWaveforms -lRawViewer
 
 
-DataModelInclude = $(RootInclude)
-DataModelLib = $(RootLib)
+DataModelInclude = $(RootInclude) $(PostgresInclude)
+DataModelLib = $(RootLib) $(PostgresLib)
+
+PythonInclude=`python3.6-config --cflags`
+PythonLib=`python3.6-config --libs`
 
 
-MyToolsInclude =  $(RootInclude) `python3.6-config --cflags` $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(GenieInclude) $(Log4CppInclude)
-MyToolsLib = -lcurl $(RootLib) `python3.6-config --libs` $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(GenieLibs) $(PythiaLibs) $(Log4CppLibs)
+MyToolsInclude =  $(RootInclude) $(PythonInclude) $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(GenieInclude) $(Log4CppInclude) $(PostgresInclude)
+MyToolsLib = -lcurl $(RootLib) $(PythonLib) $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(GenieLibs) $(PythiaLibs) $(Log4CppLibs) $(PostgresLib)
 
 
 all: lib/libStore.so lib/libLogging.so lib/libDataModel.so include/Tool.h lib/libMyTools.so lib/libServiceDiscovery.so lib/libToolChain.so Analyse RemoteControl NodeDaemon

@@ -144,6 +144,7 @@ class Postgres {
 				std::cerr<<"Postgres::ExpandRow failed to convert sql return field "
 				         <<(row.size()-1)<<" to output type "
 				         <<type_name<decltype(out)>()<<std::endl;
+				return false;
 			}
 			return true;
 		}

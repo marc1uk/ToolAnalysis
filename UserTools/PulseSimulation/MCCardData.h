@@ -1,4 +1,4 @@
-#ifndef MCARDDATA_H
+#ifndef MCCARDDATA_H
 #define MCCARDDATA_H
 
 #include <vector>
