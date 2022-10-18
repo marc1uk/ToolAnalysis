@@ -4,6 +4,7 @@
 #yum install make gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel git bzip2-devel python-devel
 
 source scl_source enable rh-python38 >/dev/null 2>&1
+source scl_source enable devtoolset-6 >/dev/null 2>&1
 
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -363,14 +364,16 @@ then
     fi
     
     cd ${BASEDIR}/ToolDAQ
-    wget https://root.cern.ch/download/root_v6.06.08.source.tar.gz
-    tar zxf root_v6.06.08.source.tar.gz
-    rm -rf root_v6.06.08.source.tar.gz 
+    git clone --depth 1 --single-branch -b v6-08-00-patches https://github.com/root-project/root.git root-6.08.06
+    cd root-6.08.06
+    # fix for gcc8
+    #sed -i '104s/.*/bool hasMD() const { return bool(MDMap); }/' interpreter/llvm/src/include/llvm/IR/ValueMap.h
+    # fixes for python3.8
+    sed -i '99s/.*/char* argi = const_cast<char*>(PyROOT_PyUnicode_AsString( PyList_GET_ITEM( argl, i ) ));/' bindings/pyroot/
+src/TPyROOTApplication.cxx
+    sed -i '103s/.*/char* cppname = const_cast<char*>(PyROOT_PyUnicode_AsString(pycppname));/' bindings/pyroot/src/PyRootType.
+cxx
     
-    cd root-6.06.08
-    # some fixes for python 3.8
-    sed -i '99s/.*/char* argi = const_cast<char*>(PyROOT_PyUnicode_AsString( PyList_GET_ITEM( argl, i ) ));/' bindings/pyroot/src/TPyROOTApplication.cxx line
-    sed -i '976s/.*/PyObject_GC_Track( vi );/' bindings/pyroot/src/Pythonize.cxx
     mkdir install 
     cd install
     cmake ../ -Dcxx14=OFF -Dcxx11=ON -Dgdml=ON -Dxml=ON -Dmt=ON -Dkrb5=ON -Dmathmore=ON -Dx11=ON -Dimt=ON -Dtmva=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -Dpythia6=ON -Dfftw3=ON
@@ -429,7 +432,6 @@ if [ $Python3 -eq 1 ]
 then
     
     cd ${BASEDIR}
-    source scl_source enable devtoolset-8 >/dev/null 2>&1
     
     source Setup.sh
     pip3 install numpy==1.23.4
