@@ -296,6 +296,9 @@ if [ $tooldaq -eq 1 ]
 then
     cd ${BASEDIR}/ToolDAQ
     git clone https://github.com/ToolDAQ/ToolDAQFramework.git
+    cd ToolDAQFramework
+    # ANNIE currently uses an old version
+    git checkout a06f13d09845c4f0fb679946f3c385dae406e2fe
 fi
 
 if [ $zmq -eq 1 ]
