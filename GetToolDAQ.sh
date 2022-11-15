@@ -436,7 +436,8 @@ then
     mkdir -p InactiveTools
     mkdir -p ImportedTools
     cd ImportedTools
-    git clone https://github.com/ToolFramework/ToolPack.git
+    #git clone https://github.com/ToolFramework/ToolPack.git
+    git clone https://github.com/marc1uk/ToolPack.git -b python3 --single-branch --depth 1;
     cd ToolPack
     ./Import.sh PythonScript
     
