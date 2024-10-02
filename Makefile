@@ -8,12 +8,12 @@ CC=g++ -std=c++1y -g -fPIC -shared $(CPPFLAGS)
 CCC= g++ -std=c++1y -g -fPIC  $(CPPFLAGS)
 
 
-ZMQLib= -L $(ToolDAQPath)/zeromq-4.0.7/lib -lzmq 
+ZMQLib= -L $(ToolDAQPath)/zeromq-4.0.7/lib -lzmq
 ZMQInclude= -isystem$(ToolDAQPath)/zeromq-4.0.7/include/
 
 BoostLib= -L $(ToolDAQPath)/boost_1_66_0/install/lib -lboost_date_time -lboost_serialization  -lboost_iostreams -lboost_system -lboost_filesystem -lboost_regex
 BoostInclude= -isystem$(ToolDAQPath)/boost_1_66_0/install/include
- 
+
 WCSimLib= -L $(ToolDAQPath)/WCSimLib -lWCSimRoot
 WCSimInclude= -I $(ToolDAQPath)/WCSimLib/include
 
@@ -23,6 +23,9 @@ GenieLibs= `genie-config --libs` -lxml2 `gsl-config --libs` -L$(GENIE_REWEIGHT)/
 PythiaLibs= -L $(ToolDAQPath)/Pythia6Support/v6_424/lib -lPythia6
 Log4CppLibs= -L $(ToolDAQPath)/log4cpp/lib -llog4cpp
 Log4CppInclude= -isystem$(ToolDAQPath)/log4cpp/include
+
+PostgresLib= -L $(ToolDAQPath)/pqxx/install/lib -lpqxx -L /usr/pgsql-12/lib -lpq
+PostgresInclude= -I $(ToolDAQPath)/pqxx/install/include
 
 RATEventLib= -L $(ToolDAQPath)/RATEventLib/lib -lRATEvent
 RATEventInclude= -I $(ToolDAQPath)/RATEventLib/include
@@ -36,7 +39,7 @@ CLHEPLib= -L ${CLHEP_DIR}/lib -lCLHEP-2.4.0.2
 RootLib=  -L `root-config --libdir --glibs` -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -pthread -lm -ldl -rdynamic -m64 -lGui -lGenVector -lMinuit -lGeom -lEG -lEGPythia6 -lEve #-lGL -lGLEW -lGLU
 RootInclude= -isystem`root-config --incdir`
 
-ALL_INCLUDE_DIRS=$(ZMQInclude) $(BoostInclude) $(WCSimInclude) $(GenieInclude) $(Log4CppInclude) $(RATEventInclude) $(MRDTrackInclude) -I../include
+ALL_INCLUDE_DIRS=$(ZMQInclude) $(BoostInclude) $(WCSimInclude) $(GenieInclude) $(Log4CppInclude) $(RATEventInclude) $(MRDTrackInclude) $(PostgresInclude) -I../include
 # we need to build a ROOT dictionary for the DataModel for python integration to work.
 # we're using `-isystem` instead of `-I` for dependencies here to suppress the myriad of warnings
 # coming from code we cannot fix, but rootcling ignores `-isystem`, so fails to find the headers.
@@ -49,13 +52,13 @@ ALL_INCLUDE_DIRS2=$(subst -isystem,-I,$(ALL_INCLUDE_DIRS))
 RawViewerLib= -L UserTools/PlotWaveforms -lRawViewer
 
 
-DataModelInclude = $(RootInclude)
-DataModelLib = $(RootLib)
+DataModelInclude = $(RootInclude) $(PostgresInclude)
+DataModelLib = $(RootLib) $(PostgresLib)
 HEADERS=$(shell cd DataModel && ls *.h)
 
-MyToolsInclude =  $(RootInclude) $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(CLHEPInc) $(Log4CppInclude) $(GenieInclude)
+MyToolsInclude =  $(RootInclude) $(MrdTrackInclude) $(WCSimInclude) $(RATEventInclude) $(CLHEPInc) $(Log4CppInclude) $(GenieInclude) $(PostgresInclude)
 MyToolsInclude += `python3-config --cflags` -Wno-sign-compare
-MyToolsLib = -lcurl $(RootLib) $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(CLHEPLib) $(Log4CppLibs) $(GenieLibs) $(PythiaLibs)
+MyToolsLib = -lcurl $(RootLib) $(MrdTrackLib) $(WCSimLib) $(RATEventLib) $(RawViewerLib) $(CLHEPLib) $(Log4CppLibs) $(GenieLibs) $(PythiaLibs) $(PostgresLib)
 MyToolsLib += `python3-config --ldflags --embed`
 
 

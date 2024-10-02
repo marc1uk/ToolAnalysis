@@ -38,6 +38,7 @@
 #include "LAPPDPulse.h"
 #include "CardData.h"
 #include "TriggerData.h"
+#include "Postgres.h"
 
 #include <zmq.hpp>
 
@@ -72,6 +73,8 @@ class DataModel {
 
   zmq::context_t* context; ///< ZMQ contex used for producing zmq sockets for inter thread,  process, or computer communication
 
+  // database manager
+  Postgres postgres;
 
  private:
 
